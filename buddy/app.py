@@ -40,6 +40,8 @@ WALK_SPEED = 46.0        # 초당 이동 픽셀
 FRAME_INTERVAL = 1.0 / 30.0
 DRAG_THRESHOLD = 4.0     # 이만큼 넘게 움직이면 클릭이 아니라 끌기로 본다
 SCALES = [("아주 작게", 0.6), ("작게", 0.8), ("보통", 1.0), ("크게", 1.4), ("아주 크게", 1.7)]
+DEMO_CYCLE = ["happy", "busy", "worried", "panic", "exhausted", "sleepy"]
+DEMO_SECONDS = 4.0      # --demo cycle 에서 상태를 바꾸는 간격
 LONG_PRESS_SECONDS = 0.8    # 이만큼 누르고 있으면 말풍선을 고정한다
 FADE_SECONDS = 0.28         # 사라질 때 투명해지는 시간
 
@@ -264,7 +266,7 @@ class BuddyController(NSObject):
         if pending is None:
             return
         self.snapshot = pending
-        self.state.mood = self.force_mood or pending.mood
+        self.state.mood = self._demo_mood() or pending.mood
         self.notifier.update(pending)
         if self.bubble_window.isVisible():
             self._render_bubble()
@@ -274,6 +276,8 @@ class BuddyController(NSObject):
     def tick_(self, _timer):
         now = time.time()
         self._adopt_snapshot()
+        if self.force_mood == "cycle":
+            self.state.mood = self._demo_mood()
         self._update_blink(now)
         self._update_walk(now)
         self._update_hover()
@@ -285,6 +289,16 @@ class BuddyController(NSObject):
 
         self._update_press(now)
         self._update_bubble(now)
+
+    @objc.python_method
+    def _demo_mood(self) -> str | None:
+        """--demo 로 고정한 표정. cycle 이면 일정 간격으로 돌아간다."""
+        if self.force_mood is None:
+            return None
+        if self.force_mood != "cycle":
+            return self.force_mood
+        index = int(time.time() / DEMO_SECONDS) % len(DEMO_CYCLE)
+        return DEMO_CYCLE[index]
 
     @objc.python_method
     def _update_blink(self, now: float) -> None:

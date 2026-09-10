@@ -8,6 +8,7 @@
     python -m buddy --demo exhausted
                                  표정을 고정해서 확인 (happy busy worried panic
                                  exhausted sleepy). 사용량과 무관하게 그 모습으로 뜬다.
+                                 cycle 을 주면 4초마다 차례로 돌아간다.
     python -m buddy --install-agent / --uninstall-agent
 """
 
@@ -59,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if flag == "--demo":
-        moods = ["happy", "busy", "worried", "panic", "exhausted", "sleepy"]
+        moods = ["happy", "busy", "worried", "panic", "exhausted", "sleepy", "cycle"]
         if len(args) < 2 or args[1] not in moods:
             print("사용법: python -m buddy --demo <표정>")
             print("  " + " | ".join(moods))
