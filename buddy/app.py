@@ -34,7 +34,7 @@ from .bubble import BubbleView, measure, rows_from_snapshot
 from .notify import Notifier
 from .usage import UsageIndex, summarize
 
-BASE_SIZE = 132.0        # 마스코트 창 한 변 (배율 1.0 기준)
+BASE_SIZE = 106.0        # 마스코트 창 한 변 (배율 1.0 = 메뉴의 "보통")
 WALK_SPEED = 46.0        # 초당 이동 픽셀
 FRAME_INTERVAL = 1.0 / 30.0
 DRAG_THRESHOLD = 4.0     # 이만큼 넘게 움직이면 클릭이 아니라 끌기로 본다
