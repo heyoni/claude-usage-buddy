@@ -40,7 +40,7 @@ WALK_SPEED = 46.0        # 초당 이동 픽셀
 FRAME_INTERVAL = 1.0 / 30.0
 DRAG_THRESHOLD = 4.0     # 이만큼 넘게 움직이면 클릭이 아니라 끌기로 본다
 SCALES = [("아주 작게", 0.6), ("작게", 0.8), ("보통", 1.0), ("크게", 1.3), ("아주 크게", 1.7)]
-LONG_PRESS_SECONDS = 0.45   # 이만큼 누르고 있으면 말풍선을 고정한다
+LONG_PRESS_SECONDS = 0.8    # 이만큼 누르고 있으면 말풍선을 고정한다
 FADE_SECONDS = 0.28         # 사라질 때 투명해지는 시간
 
 
@@ -325,9 +325,19 @@ class BuddyController(NSObject):
         return (frame.origin.x, frame.origin.y)
 
     @objc.python_method
+    def _mouse_is_down(self) -> bool:
+        return bool(NSEvent.pressedMouseButtons())
+
+    @objc.python_method
     def _update_press(self, now: float) -> None:
         """꾹 누르고 있으면 말풍선을 고정해서 띄운다."""
-        if self._press_at is None or self._long_fired or self.state.dragging:
+        if self._press_at is None or self.state.dragging:
+            return
+        if not self._mouse_is_down():
+            # mouseUp 을 놓친 경우에 대비한 안전장치
+            self._press_at = None
+            return
+        if self._long_fired:
             return
         if now - self._press_at >= LONG_PRESS_SECONDS:
             self._long_fired = True
@@ -365,7 +375,7 @@ class BuddyController(NSObject):
     @objc.python_method
     def _update_hover(self) -> None:
         """마스코트 위에 있을 때만 마우스를 받아, 나머지 영역은 클릭이 통과하게 한다."""
-        if self.state.dragging:
+        if self.state.dragging or self._press_at is not None:
             self.window.setIgnoresMouseEvents_(False)
             return
         location = NSEvent.mouseLocation()
@@ -460,16 +470,11 @@ class BuddyController(NSObject):
 
     @objc.python_method
     def hide_bubble(self) -> None:
-        """바로 지우지 않고 투명해지면서 사라진다."""
+        """바로 지우지 않고 투명해지면서 사라진다. 실제로 감추는 건 _update_bubble."""
         if not self.bubble_window.isVisible() or self._fade_started is not None:
             return
         self._fade_started = time.time()
         self.bubble_until = 0.0
-        self.bubble_pinned = False
-        self._fade_started = None
-        self._press_at = None
-        self._long_fired = False
-        self._focus = self._focus_key()
 
     @objc.python_method
     def _render_bubble(self) -> None:
