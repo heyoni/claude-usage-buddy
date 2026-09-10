@@ -26,6 +26,7 @@ from AppKit import (
     NSWindowCollectionBehaviorFullScreenAuxiliary,
     NSWindowCollectionBehaviorStationary,
     NSWindowStyleMaskBorderless,
+    NSWorkspace,
 )
 from Foundation import NSMakePoint, NSMakeRect, NSObject
 
@@ -39,6 +40,8 @@ WALK_SPEED = 46.0        # 초당 이동 픽셀
 FRAME_INTERVAL = 1.0 / 30.0
 DRAG_THRESHOLD = 4.0     # 이만큼 넘게 움직이면 클릭이 아니라 끌기로 본다
 SCALES = [("아주 작게", 0.6), ("작게", 0.8), ("보통", 1.0), ("크게", 1.3), ("아주 크게", 1.7)]
+LONG_PRESS_SECONDS = 0.45   # 이만큼 누르고 있으면 말풍선을 고정한다
+FADE_SECONDS = 0.28         # 사라질 때 투명해지는 시간
 
 
 def _new_window(width: float, height: float, level: int) -> NSWindow:
@@ -86,6 +89,7 @@ class MascotView(NSView):
             location.x - self._controller.pos_x,
             location.y - self._controller.pos_y,
         )
+        self._controller.press_began()
 
     def mouseDragged_(self, _event):
         if self._grab is None:
@@ -105,7 +109,7 @@ class MascotView(NSView):
         if was_drag:
             self._controller.end_drag()
         else:
-            self._controller.toggle_bubble()
+            self._controller.press_ended()
 
     def rightMouseDown_(self, event):
         self._controller.show_menu(event, self)
@@ -144,9 +148,18 @@ class BuddyController(NSObject):
         self.state_until = time.time() + 2.0
         self.target_x = self.pos_x
         self.bubble_until = 0.0
+        self.bubble_pinned = False
+        self._fade_started = None
+        self._press_at = None
+        self._long_fired = False
+        self._focus = self._focus_key()
         self._blink_at = time.time() + random.uniform(2.0, 6.0)
         self._blinking_until = 0.0
         self._t0 = time.time()
+
+        NSWorkspace.sharedWorkspace().notificationCenter().addObserver_selector_name_object_(
+            self, "spaceChanged:", "NSWorkspaceActiveSpaceDidChangeNotification", None
+        )
 
         threading.Thread(target=self._refresh_loop, daemon=True).start()
         return self
@@ -256,10 +269,8 @@ class BuddyController(NSObject):
         self.view.setNeedsDisplay_(True)
         self._sync_window()
 
-        if self.bubble_window.isVisible():
-            self._position_bubble()
-            if self.bubble_until and now > self.bubble_until:
-                self.hide_bubble()
+        self._update_press(now)
+        self._update_bubble(now)
 
     @objc.python_method
     def _update_blink(self, now: float) -> None:
@@ -273,7 +284,8 @@ class BuddyController(NSObject):
 
     @objc.python_method
     def _update_walk(self, now: float) -> None:
-        if self.state.dragging or self.bubble_window.isVisible():
+        # 잠깐 뜬 말풍선을 읽는 동안에는 멈춰 서고, 고정해 둔 동안에는 계속 돌아다닌다
+        if self.state.dragging or (self.bubble_window.isVisible() and not self.bubble_pinned):
             self.walk_state = "idle"
             self.state_until = max(self.state_until, now + 1.0)
             return
@@ -304,6 +316,53 @@ class BuddyController(NSObject):
         self._clamp()
 
     @objc.python_method
+    def _focus_key(self):
+        """지금 포커스가 있는 화면을 구분하는 값. 바뀌면 말풍선을 닫는다."""
+        screen = NSScreen.mainScreen()
+        if screen is None:
+            return None
+        frame = screen.frame()
+        return (frame.origin.x, frame.origin.y)
+
+    @objc.python_method
+    def _update_press(self, now: float) -> None:
+        """꾹 누르고 있으면 말풍선을 고정해서 띄운다."""
+        if self._press_at is None or self._long_fired or self.state.dragging:
+            return
+        if now - self._press_at >= LONG_PRESS_SECONDS:
+            self._long_fired = True
+            self.show_bubble(pinned=True)
+
+    @objc.python_method
+    def _update_bubble(self, now: float) -> None:
+        if self._fade_started is not None:
+            progress = (now - self._fade_started) / FADE_SECONDS
+            if progress >= 1.0:
+                self.bubble_window.orderOut_(None)
+                self.bubble_window.setAlphaValue_(1.0)
+                self._fade_started = None
+                self.bubble_until = 0.0
+                self.bubble_pinned = False
+            else:
+                self.bubble_window.setAlphaValue_(1.0 - progress)
+            return
+
+        if not self.bubble_window.isVisible():
+            return
+
+        self._position_bubble()
+
+        # 다른 모니터로 포커스가 옮겨가면 닫는다
+        focus = self._focus_key()
+        if focus != self._focus:
+            self._focus = focus
+            self.hide_bubble()
+            return
+
+        if self.bubble_until and now > self.bubble_until:
+            self.hide_bubble()
+
+    @objc.python_method
     def _update_hover(self) -> None:
         """마스코트 위에 있을 때만 마우스를 받아, 나머지 영역은 클릭이 통과하게 한다."""
         if self.state.dragging:
@@ -318,8 +377,23 @@ class BuddyController(NSObject):
     # ---------- 상호작용 ----------
 
     @objc.python_method
+    def press_began(self) -> None:
+        self._press_at = time.time()
+        self._long_fired = False
+
+    @objc.python_method
+    def press_ended(self) -> None:
+        self._press_at = None
+        if self._long_fired:
+            # 꾹 눌러서 이미 고정해 띄웠다. 손을 떼도 그대로 둔다.
+            self._long_fired = False
+            return
+        self.toggle_bubble()
+
+    @objc.python_method
     def begin_drag(self) -> None:
         self.state.dragging = True
+        self._press_at = None
         self.hide_bubble()
 
     @objc.python_method
@@ -365,24 +439,37 @@ class BuddyController(NSObject):
 
     @objc.python_method
     def toggle_bubble(self) -> None:
-        if self.bubble_window.isVisible():
+        if self.bubble_window.isVisible() and self._fade_started is None:
             self.hide_bubble()
         else:
             self.show_bubble()
 
     @objc.python_method
-    def show_bubble(self) -> None:
+    def show_bubble(self, pinned: bool = False) -> None:
+        """pinned 면 시간이 지나도 닫히지 않는다 (꾹 누르기)."""
         self._refresh_now.set()
         self._render_bubble()
         self._position_bubble()
+        self._fade_started = None
+        self.bubble_window.setAlphaValue_(1.0)
         self.bubble_window.orderFrontRegardless()
+        self.bubble_pinned = pinned
+        self._focus = self._focus_key()
         seconds = float(self.cfg["mascot"].get("bubble_seconds") or 0)
-        self.bubble_until = time.time() + seconds if seconds > 0 else 0.0
+        self.bubble_until = 0.0 if pinned or seconds <= 0 else time.time() + seconds
 
     @objc.python_method
     def hide_bubble(self) -> None:
-        self.bubble_window.orderOut_(None)
+        """바로 지우지 않고 투명해지면서 사라진다."""
+        if not self.bubble_window.isVisible() or self._fade_started is not None:
+            return
+        self._fade_started = time.time()
         self.bubble_until = 0.0
+        self.bubble_pinned = False
+        self._fade_started = None
+        self._press_at = None
+        self._long_fired = False
+        self._focus = self._focus_key()
 
     @objc.python_method
     def _render_bubble(self) -> None:
@@ -461,12 +548,15 @@ class BuddyController(NSObject):
 
         NSMenu.popUpContextMenu_withEvent_forView_(menu, event, view)
 
+    def spaceChanged_(self, _note):
+        self.hide_bubble()
+
     def menuShow_(self, _sender):
-        self.show_bubble()
+        self.show_bubble(pinned=True)
 
     def menuRefresh_(self, _sender):
         self._refresh_now.set()
-        self.show_bubble()
+        self.show_bubble(pinned=True)
 
     def menuSetScale_(self, sender):
         self.set_scale(sender.representedObject())
