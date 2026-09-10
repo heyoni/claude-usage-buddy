@@ -92,6 +92,7 @@ def main() -> None:
     # 캐시 비트맵으로 합치면 뷰의 불투명 배경까지 같이 딸려온다.
     view = BubbleView.alloc().initWithFrame_(NSMakeRect(0, 0, bubble_w, bubble_h))
     view.setRows_(rows)
+    view.setTailOffset_(0)   # 마스코트가 바로 아래에 있을 때
 
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.setCurrentContext_(ctx)
