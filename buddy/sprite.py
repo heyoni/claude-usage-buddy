@@ -110,8 +110,10 @@ def frame_rows(st: MascotState) -> list[str]:
             # 자는 눈은 가로로 한 칸 더 길게 그어서 감은 티가 나게 한다
             rows[2] = _set(_set(rows[2], 4, "o"), 9, "o")
     elif st.mood == "panic":
-        # 놀라면 눈이 아래로 한 칸 더 커진다
-        rows[3] = _set(_set(rows[3], 3, "o"), 10, "o")
+        # 놀라면 눈이 옆으로 한 칸씩 커진다.
+        # 아래(팔 줄)로 늘리면 걸을 때 윗몸만 기울면서 눈이 어긋난다.
+        rows[1] = _set(_set(rows[1], 4, "o"), 9, "o")
+        rows[2] = _set(_set(rows[2], 4, "o"), 9, "o")
 
     # 걸을 때는 윗몸을 진행 방향으로 한 칸 기울인다
     if st.walking:
