@@ -113,7 +113,13 @@ def cell_size(size: float) -> int:
 def frame_rows(st: MascotState) -> list[str]:
     """현재 상태에 맞는 도안 한 장을 만든다."""
     if st.mood == "exhausted":
-        return list(_LYING)
+        rows = list(_LYING)
+        if st.step_phase:
+            # 날숨 — 몸이 옆으로 한 칸씩 꺼진다.
+            # 위아래로 움직이면 누운 게 아니라 제자리뛰기처럼 보인다.
+            rows[6] = "  ##########  "
+            rows[7] = "  ##########  "
+        return rows
 
     rows = list(_BASE)
 
@@ -306,11 +312,11 @@ def _draw_zzz(origin_x: int, origin_y: int, cell: int, grid_h: int, st: MascotSt
 def step(st: MascotState, t: float) -> None:
     """시간 t(초)에 맞춰 애니메이션 값을 갱신한다. 전부 칸 단위로만 움직인다."""
     if st.mood == "exhausted":
-        # 가쁜 숨만 쉰다
-        st.bob = int(t * 2.4) % 2
-        st.step_phase = 0
+        # 바닥에 붙어 느리게 숨만 쉰다. 몸이 떠오르면 안 된다.
+        st.bob = 0
+        st.step_phase = int(t * 0.8) % 2
         st.jitter = 0
-        st.zzz = (t * 1.3) % 1.0
+        st.zzz = (t * 0.7) % 1.0
         return
 
     if st.mood == "sleepy":
