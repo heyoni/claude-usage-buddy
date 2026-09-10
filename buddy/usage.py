@@ -297,6 +297,8 @@ class Snapshot:
         """마스코트 표정을 정하는 단계."""
         if self.block is None or not self.block.is_active(self.generated_at):
             return "sleepy"
+        if self.percent >= 100:
+            return "exhausted"
         if self.percent >= 95:
             return "panic"
         if self.percent >= 80:

@@ -35,6 +35,7 @@ MOODS = [
     ("worried", False),
     ("panic", False),
     ("sleepy", False),
+    ("exhausted", False),
 ]
 
 

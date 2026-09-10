@@ -299,7 +299,8 @@ class BuddyController(NSObject):
             self.walk_state = "idle"
             self.state_until = max(self.state_until, now + 1.0)
             return
-        if not self.cfg["mascot"].get("wander", True):
+        # 다 써 버려 누워 있는 동안에는 움직이지 않는다
+        if not self.cfg["mascot"].get("wander", True) or self.state.mood == "exhausted":
             self.walk_state = "idle"
             return
 

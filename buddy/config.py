@@ -21,7 +21,7 @@ DEFAULTS: dict = {
     "notify": {
         "enabled": True,
         # 블록 사용률이 이 값을 넘을 때 한 번씩 알린다.
-        "thresholds": [50, 80, 95],
+        "thresholds": [50, 80, 95, 100],
         # 새 5시간 블록이 시작되면 알린다.
         "on_block_reset": True,
     },

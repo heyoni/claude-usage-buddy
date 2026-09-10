@@ -34,6 +34,20 @@ _BASE = [
     "  ##########  ",
 ]
 _LEGS_STAND = ["   # #  # #   ", "   # #  # #   "]
+
+# 다 써 버렸을 때. 배를 뒤집고 다리를 위로 뻗은 채 눈을 감는다.
+# 서 있을 때와 높이를 맞춰야(9줄) 바닥이 어긋나지 않는다.
+_LYING = [
+    "              ",
+    "              ",
+    "              ",
+    "   # #  # #   ",
+    "   # #  # #   ",
+    " ############ ",
+    "##############",
+    " #oo######oo# ",
+    " ############ ",
+]
 _LEGS_A = ["   # #  # #   ", "   #    #     "]
 _LEGS_B = ["   # #  # #   ", "     #    #   "]
 
@@ -95,6 +109,9 @@ def cell_size(size: float) -> int:
 
 def frame_rows(st: MascotState) -> list[str]:
     """현재 상태에 맞는 도안 한 장을 만든다."""
+    if st.mood == "exhausted":
+        return list(_LYING)
+
     rows = list(_BASE)
 
     if st.walking:
@@ -175,7 +192,7 @@ def draw(width: float, height: float, st: MascotState) -> None:
             if ch == "o":
                 NSBezierPath.bezierPathWithRect_(rect(c, r)).fill()
 
-    if st.mood in ("worried", "panic"):
+    if st.mood in ("worried", "panic", "exhausted"):
         _draw_sweat(rect, filled, st)
     if st.mood == "sleepy":
         _draw_zzz(origin_x, origin_y, cell, grid_h, st)
@@ -223,7 +240,8 @@ def _draw_sweat(rect, body: set[tuple[int, int]], st: MascotState) -> None:
     # 도안 위쪽 여백에 두므로 팔(3~4행)과 겹칠 일이 없다.
     fall = int(st.zzz * 2)
     left = GRID_W - 1 if st.facing > 0 else -2
-    top = -2 + fall
+    # 서 있을 땐 머리 위 여백에, 누워 있을 땐 몸 옆에 붙인다
+    top = (4 if st.mood == "exhausted" else -2) + fall
 
     cells = {
         (left + c, top + r)
@@ -236,7 +254,7 @@ def _draw_sweat(rect, body: set[tuple[int, int]], st: MascotState) -> None:
     for (col, row) in _outline_cells(cells) - body:
         NSBezierPath.bezierPathWithRect_(rect(col, row)).fill()
 
-    (ALERT if st.mood == "panic" else SWEAT).setFill()
+    (ALERT if st.mood in ("panic", "exhausted") else SWEAT).setFill()
     for (col, row) in cells:
         NSBezierPath.bezierPathWithRect_(rect(col, row)).fill()
 
@@ -284,6 +302,14 @@ def _draw_zzz(origin_x: int, origin_y: int, cell: int, grid_h: int, st: MascotSt
 
 def step(st: MascotState, t: float) -> None:
     """시간 t(초)에 맞춰 애니메이션 값을 갱신한다. 전부 칸 단위로만 움직인다."""
+    if st.mood == "exhausted":
+        # 가쁜 숨만 쉰다
+        st.bob = int(t * 2.4) % 2
+        st.step_phase = 0
+        st.jitter = 0
+        st.zzz = (t * 1.3) % 1.0
+        return
+
     if st.mood == "sleepy":
         st.bob = int(t * 1.2) % 2
         st.step_phase = 0
