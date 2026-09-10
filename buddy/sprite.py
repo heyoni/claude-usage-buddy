@@ -67,7 +67,23 @@ class MascotState:
 def hit_extent(size: float) -> tuple[float, float]:
     """마우스 판정용 반너비/반높이. 도트 몸이 가로로 길어서 원이 아니라 사각형이다."""
     cell = cell_size(size)
-    return cell * GRID_W / 2 + cell, cell * GRID_H / 2 + cell
+    return cell * GRID_W / 2 + cell * 1.5, cell * GRID_H / 2 + cell * 1.5
+
+
+def top_offset(size: float) -> float:
+    """창 중심에서 머리 꼭대기까지의 거리.
+
+    도안 높이의 절반에 크림색 테두리 한 칸과 위아래로 튀는 폭 한 칸을 더한다.
+    말풍선 꼬리를 이보다 위에 두어야 머리와 겹치지 않는다.
+    """
+    cell = cell_size(size)
+    return cell * GRID_H / 2 + cell * 2
+
+
+def bottom_offset(size: float) -> float:
+    """창 중심에서 발밑 그림자 아래까지의 거리."""
+    cell = cell_size(size)
+    return cell * GRID_H / 2 + cell * 2
 
 
 def cell_size(size: float) -> int:

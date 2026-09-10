@@ -496,12 +496,12 @@ class BuddyController(NSObject):
     def _position_bubble(self) -> None:
         frame = self._screen_bounds()
         size = self.bubble_window.frame().size
-        _, half_h = sprite.hit_extent(self.size)
+        gap = max(6.0, sprite.cell_size(self.size) * 1.0)
         x = self.pos_x - size.width / 2
-        y = self.pos_y + half_h
+        y = self.pos_y + sprite.top_offset(self.size) + gap
         x = max(frame.origin.x + 6, min(frame.origin.x + frame.size.width - size.width - 6, x))
         if y + size.height > frame.origin.y + frame.size.height:
-            y = self.pos_y - half_h - size.height
+            y = self.pos_y - sprite.bottom_offset(self.size) - gap - size.height
         self.bubble_view.setTailOffset_(self.pos_x - (x + size.width / 2))
         self.bubble_window.setFrameOrigin_(NSMakePoint(x, y))
 

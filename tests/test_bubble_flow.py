@@ -28,7 +28,7 @@ def report(label):
           f"pinned={c.bubble_pinned!s:5s} until={c.bubble_until:.0f} "
           f"fade={c._fade_started is not None}")
 
-print("=== 짧게 클릭 (5초 뒤 사라져야 함) ===")
+print("=== 짧게 클릭 (설정된 시간 뒤 사라져야 함) ===")
 c.press_began(); tick(2); c.press_ended()
 report("클릭 직후")
 t0 = time.time()
