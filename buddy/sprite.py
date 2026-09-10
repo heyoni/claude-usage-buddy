@@ -35,20 +35,21 @@ _BASE = [
 ]
 _LEGS_STAND = ["   # #  # #   ", "   # #  # #   "]
 
-# 다 써 버렸을 때. 다리에 힘이 풀려 주저앉고 몸이 옆으로 퍼진다.
-# 머리·눈·팔 위치는 서 있을 때와 같게 두어야 같은 녀석으로 보인다.
-# 높이도 9줄로 맞춰야 바닥이 어긋나지 않는다.
+# 다 써 버렸을 때. 바닥에 눌린 듯 납작하게 퍼지고 다리는 양옆으로 뻗는다.
+# 머리와 눈, 팔 위치는 서 있을 때 그대로 두어야 같은 녀석으로 보인다.
+# 높이는 9줄로 맞춰야 바닥선이 어긋나지 않는다.
 _LYING = [
     "              ",
     "              ",
     "              ",
-    "  ##########  ",
+    "              ",
+    "              ",
+    "   ########   ",
     "  #oo####oo#  ",
     "##############",
-    " ############ ",
-    " ############ ",
-    "  #  #  #  #  ",
+    "###  ####  ###",
 ]
+
 
 # 걸을 때 번갈아 딛는 다리
 _LEGS_A = ["   # #  # #   ", "   #    #     "]
@@ -113,13 +114,9 @@ def cell_size(size: float) -> int:
 def frame_rows(st: MascotState) -> list[str]:
     """현재 상태에 맞는 도안 한 장을 만든다."""
     if st.mood == "exhausted":
-        rows = list(_LYING)
-        if st.step_phase:
-            # 날숨 — 몸이 옆으로 한 칸씩 꺼진다.
-            # 위아래로 움직이면 누운 게 아니라 제자리뛰기처럼 보인다.
-            rows[6] = "  ##########  "
-            rows[7] = "  ##########  "
-        return rows
+        # 완전히 뻗은 상태. 몸을 움직이면 (위아래로든 옆으로든) 지쳐 있는
+        # 게 아니라 뛰거나 부풀었다 꺼지는 것처럼 보인다. 땀방울만 떨어진다.
+        return list(_LYING)
 
     rows = list(_BASE)
 
@@ -250,7 +247,7 @@ def _draw_sweat(rect, body: set[tuple[int, int]], st: MascotState) -> None:
     fall = int(st.zzz * 2)
     left = GRID_W - 1 if st.facing > 0 else -2
     # 서 있을 땐 머리 위 여백에, 누워 있을 땐 몸 옆에 붙인다
-    top = (4 if st.mood == "exhausted" else -2) + fall
+    top = (5 if st.mood == "exhausted" else -2) + fall
 
     cells = {
         (left + c, top + r)
@@ -312,9 +309,9 @@ def _draw_zzz(origin_x: int, origin_y: int, cell: int, grid_h: int, st: MascotSt
 def step(st: MascotState, t: float) -> None:
     """시간 t(초)에 맞춰 애니메이션 값을 갱신한다. 전부 칸 단위로만 움직인다."""
     if st.mood == "exhausted":
-        # 바닥에 붙어 느리게 숨만 쉰다. 몸이 떠오르면 안 된다.
+        # 몸은 미동도 없다. 떨어지는 땀방울만 움직인다.
         st.bob = 0
-        st.step_phase = int(t * 0.8) % 2
+        st.step_phase = 0
         st.jitter = 0
         st.zzz = (t * 0.7) % 1.0
         return
