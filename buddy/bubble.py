@@ -23,14 +23,14 @@ from AppKit import (
 )
 from Foundation import NSMakePoint, NSMakeRect, NSString
 
-from .usage import Snapshot, fmt_duration, fmt_tokens
+from .usage import Snapshot, fmt_duration
 
 U = 4.0                 # 도트 한 칸
 RADIUS_CELLS = 8        # 모서리 원의 반지름 (칸)
 PAD_X = 24.0
 PAD_TOP = 16.0
 PAD_BOTTOM = 18.0
-CONTENT_W = 196.0
+CONTENT_W = 168.0
 
 # 꼬리 도안. (칸x, 칸y) — y 0 이 맨 아래 끝, 위로 갈수록 넓어지며 오른쪽으로 눕는다
 _TAIL = [
@@ -76,37 +76,28 @@ def bar_color(percent: float):
 
 
 def rows_from_snapshot(snap: Snapshot) -> list[dict]:
-    """말풍선에 그릴 줄 목록. 지금 블록만 보여주고 나머지는 CLI 에 맡긴다."""
+    """말풍선에 그릴 줄 목록.
+
+    지금 얼마나 썼고 언제 초기화되는지만 남긴다. 금액·토큰 수와
+    하루·주 단위 합계는 CLI(`python -m buddy --cli`)에서 본다.
+    """
     if not snap.has_data:
         return [
             {"type": "title", "text": "Claude 사용량"},
             {"type": "note", "text": "아직 기록이 없어요"},
         ]
 
-    rows: list[dict] = [{"type": "title", "text": "Claude 사용량"}]
-
     if snap.block is None:
-        rows.append({"type": "row", "left": "5시간 블록", "right": "쉬는 중", "dim": True})
-        return rows
+        return [
+            {"type": "title", "text": "Claude 사용량"},
+            {"type": "note", "text": "지금은 쉬는 중"},
+        ]
 
-    rows.append(
-        {
-            "type": "row",
-            "left": "5시간 블록",
-            "right": f"{fmt_duration(snap.block_remaining)} 남음",
-            "dim": True,
-        }
-    )
-    rows.append({"type": "bar", "percent": snap.percent})
-    rows.append(
-        {
-            "type": "row",
-            "left": f"${snap.block_cost:.2f}",
-            "right": f"{fmt_tokens(snap.block_tokens)} tok",
-            "strong": True,
-        }
-    )
-    return rows
+    return [
+        {"type": "title", "text": "Claude 사용량"},
+        {"type": "bar", "percent": snap.percent},
+        {"type": "note", "text": f"{fmt_duration(snap.block_remaining)} 뒤 초기화"},
+    ]
 
 
 def _round_up(value: float) -> float:
