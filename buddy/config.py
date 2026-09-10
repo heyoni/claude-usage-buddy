@@ -16,6 +16,8 @@ DEFAULTS: dict = {
     "block_hours": 5,
     # 블록 한도(USD 환산). null 이면 지난 블록 최대치를 기준으로 자동 추정한다.
     "block_cost_limit": None,
+    # 이만큼(분) 요청이 없으면 졸기 시작한다. 0 이면 졸지 않는다.
+    "doze_after_minutes": 20,
     # 트랜스크립트 보관 기간(일). 길수록 첫 색인이 느려진다.
     "retention_days": 30,
     "notify": {

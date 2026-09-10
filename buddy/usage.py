@@ -287,18 +287,31 @@ class Snapshot:
     week_cost: float
     by_model: list[tuple[str, float]]   # (표시명, 비용) 내림차순
     total_requests: int
+    idle_seconds: float                 # 마지막 요청 이후 지난 시간
+    doze_after: float                   # 이만큼 조용하면 존다
 
     @property
     def has_data(self) -> bool:
         return self.total_requests > 0
 
     @property
+    def dozing(self) -> bool:
+        """블록은 열려 있지만 한동안 조용한 상태."""
+        return self.idle_seconds >= self.doze_after
+
+    @property
     def mood(self) -> str:
-        """마스코트 표정을 정하는 단계."""
+        """마스코트 표정을 정하는 단계.
+
+        한도를 다 쓴 상태가 가장 먼저다. 그다음이 졸기 — 쓰지 않는 동안에는
+        사용률이 얼마든 자게 둔다. 깨어 있을 때만 사용률로 표정을 정한다.
+        """
         if self.block is None or not self.block.is_active(self.generated_at):
             return "sleepy"
         if self.percent >= 100:
             return "exhausted"
+        if self.dozing:
+            return "sleepy"
         if self.percent >= 95:
             return "panic"
         if self.percent >= 80:
@@ -313,6 +326,7 @@ def summarize(
     block_hours: int = 5,
     manual_limit: float | None = None,
     now: float | None = None,
+    doze_after_seconds: float = 1200.0,
 ) -> Snapshot:
     now = now if now is not None else time.time()
     blocks = build_blocks(entries, block_hours)
@@ -359,6 +373,8 @@ def summarize(
         week_cost=w_cost,
         by_model=sorted(per_model.items(), key=lambda kv: -kv[1]),
         total_requests=len(entries),
+        idle_seconds=(now - entries[-1].ts) if entries else float("inf"),
+        doze_after=doze_after_seconds,
     )
 
 

@@ -37,7 +37,7 @@ STATES = [
     ("worried", "80 – 94%", "땀을 흘림"),
     ("panic", "95 – 99%", "빨간 땀 + 떨림"),
     ("exhausted", "100% –", "퍼져서 숨만 쉼"),
-    ("sleepy", "쉬는 중", "눈 감고 잠"),
+    ("sleepy", "조용할 때", "20분 쉬면 졺"),
 ]
 PERCENTS = {"happy": 24.0, "busy": 63.0, "worried": 87.0, "panic": 97.0, "exhausted": 100.0}
 

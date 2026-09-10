@@ -12,7 +12,13 @@ def _snapshot():
     cfg = config.load()
     index = UsageIndex(retention_days=cfg["retention_days"])
     index.refresh()
-    return summarize(index.entries, cfg["block_hours"], cfg.get("block_cost_limit"))
+    minutes = float(cfg.get("doze_after_minutes") or 0)
+    return summarize(
+        index.entries,
+        cfg["block_hours"],
+        cfg.get("block_cost_limit"),
+        doze_after_seconds=minutes * 60.0 if minutes > 0 else float("inf"),
+    )
 
 
 def print_report() -> None:
@@ -93,6 +99,8 @@ def print_json() -> None:
                 "today": {"cost_usd": round(snap.today_cost, 4), "tokens": snap.today_tokens},
                 "week": {"cost_usd": round(snap.week_cost, 4), "tokens": snap.week_tokens},
                 "by_model": [{"model": n, "cost_usd": round(c, 4)} for n, c in snap.by_model],
+                "idle_seconds": int(snap.idle_seconds) if snap.idle_seconds != float("inf") else None,
+                "dozing": snap.dozing,
                 "mood": snap.mood,
             },
             ensure_ascii=False,

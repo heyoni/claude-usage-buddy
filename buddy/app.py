@@ -254,6 +254,7 @@ class BuddyController(NSObject):
                     self.index.entries,
                     self.cfg["block_hours"],
                     self.cfg.get("block_cost_limit"),
+                    doze_after_seconds=self._doze_seconds(),
                 )
             except Exception:  # 갱신 실패로 마스코트가 멈추면 안 된다
                 pass
@@ -291,6 +292,11 @@ class BuddyController(NSObject):
         self._update_bubble(now)
 
     @objc.python_method
+    def _doze_seconds(self) -> float:
+        minutes = float(self.cfg.get("doze_after_minutes") or 0)
+        return minutes * 60.0 if minutes > 0 else float("inf")
+
+    @objc.python_method
     def _demo_mood(self) -> str | None:
         """--demo 로 고정한 표정. cycle 이면 일정 간격으로 돌아간다."""
         if self.force_mood is None:
@@ -317,8 +323,8 @@ class BuddyController(NSObject):
             self.walk_state = "idle"
             self.state_until = max(self.state_until, now + 1.0)
             return
-        # 다 써 버려 누워 있는 동안에는 움직이지 않는다
-        if not self.cfg["mascot"].get("wander", True) or self.state.mood == "exhausted":
+        # 뻗어 있거나 자는 동안에는 움직이지 않는다
+        if not self.cfg["mascot"].get("wander", True) or self.state.mood in ("exhausted", "sleepy"):
             self.walk_state = "idle"
             return
 
