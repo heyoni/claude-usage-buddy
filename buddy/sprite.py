@@ -49,14 +49,14 @@ _LYING_OUT = [          # 날숨
     "##############",
     "##############",
 ]
-_LYING_IN = [           # 들숨 — 바닥은 그대로, 몸통이 한 줄 부풀며 머리를 밀어 올린다
+_LYING_IN = [           # 들숨 — 높이는 그대로 두고 등만 양옆으로 한 칸씩 부푼다
     "              ",
     "              ",
     "              ",
     "              ",
-    "   ########   ",
+    "              ",
+    "  ##########  ",
     "  #oo####oo#  ",
-    "##############",
     "##############",
     "##############",
 ]
@@ -257,9 +257,13 @@ def _draw_sweat(rect, body: set[tuple[int, int]], st: MascotState) -> None:
     # 머리 오른쪽 위 모서리에 붙여야 몸에서 난 땀처럼 보인다.
     # 도안 위쪽 여백에 두므로 팔(3~4행)과 겹칠 일이 없다.
     fall = int(st.zzz * 2)
-    left = GRID_W - 1 if st.facing > 0 else -2
-    # 서 있을 땐 머리 위 여백에, 누워 있을 땐 몸 옆에 붙인다
-    top = (5 if st.mood == "exhausted" else -2) + fall
+    if st.mood == "exhausted":
+        # 납작해진 몸 위쪽 빈 자리로 떨어진다.
+        # 몸과 같은 줄에 두면 겹쳐서 파묻힌 것처럼 보인다.
+        left, top = GRID_W - 3, fall
+    else:
+        left = GRID_W - 1 if st.facing > 0 else -2
+        top = -2 + fall
 
     cells = {
         (left + c, top + r)
