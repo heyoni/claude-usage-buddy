@@ -36,7 +36,7 @@ DEFAULTS: dict = {
         "position": None,
         # 말풍선이 저절로 닫히는 시간(초). 0 이면 직접 닫을 때까지 유지.
         # 꾹 누르거나 메뉴로 열면 이 시간과 관계없이 고정된다.
-        "bubble_seconds": 5,
+        "bubble_seconds": 3,
     },
 }
 
