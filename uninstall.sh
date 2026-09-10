@@ -8,7 +8,7 @@ VENV_DIR="$HOME/.claude-usage-buddy/venv"
 if [[ -x "$VENV_DIR/bin/python" ]]; then
   (cd "$PROJECT_DIR" && "$VENV_DIR/bin/python" -m buddy --uninstall-agent) || true
 fi
-pkill -f "python -m buddy" 2>/dev/null || true
+pkill -f "\-m buddy" 2>/dev/null || true
 
 echo "정리했습니다."
 echo "설정과 색인까지 지우려면:  rm -rf ~/.claude-usage-buddy"

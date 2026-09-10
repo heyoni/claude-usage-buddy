@@ -38,6 +38,7 @@ BASE_SIZE = 132.0        # 마스코트 창 한 변 (배율 1.0 기준)
 WALK_SPEED = 46.0        # 초당 이동 픽셀
 FRAME_INTERVAL = 1.0 / 30.0
 DRAG_THRESHOLD = 4.0     # 이만큼 넘게 움직이면 클릭이 아니라 끌기로 본다
+SCALES = [("아주 작게", 0.6), ("작게", 0.8), ("보통", 1.0), ("크게", 1.3), ("아주 크게", 1.7)]
 
 
 def _new_window(width: float, height: float, level: int) -> NSWindow:
@@ -333,6 +334,28 @@ class BuddyController(NSObject):
         self._sync_window()
 
     @objc.python_method
+    def set_scale(self, value: float) -> None:
+        """마스코트 크기를 바로 바꾼다. 다시 실행할 필요 없다."""
+        value = max(0.4, min(3.0, float(value)))
+        self.cfg["mascot"]["scale"] = value
+        self.size = BASE_SIZE * value
+
+        frame = self.window.frame()
+        self.window.setFrame_display_(
+            NSMakeRect(frame.origin.x, frame.origin.y, self.size, self.size), True
+        )
+        self.view.setFrame_(NSMakeRect(0, 0, self.size, self.size))
+        self._clamp()
+        self._sync_window()
+        self.view.setNeedsDisplay_(True)
+        if self.bubble_window.isVisible():
+            self._position_bubble()
+        try:
+            config.save(self.cfg)
+        except OSError:
+            pass
+
+    @objc.python_method
     def _save_position(self) -> None:
         self.cfg["mascot"]["position"] = [round(self.pos_x, 1), round(self.pos_y, 1)]
         try:
@@ -406,6 +429,22 @@ class BuddyController(NSObject):
         item("사용량 보기", "menuShow:")
         item("지금 새로고침", "menuRefresh:")
         menu.addItem_(NSMenuItem.separatorItem())
+
+        size_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_("크기", None, "")
+        size_menu = NSMenu.alloc().init()
+        current = float(self.cfg["mascot"].get("scale") or 1.0)
+        for label, value in SCALES:
+            entry = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+                label, "menuSetScale:", ""
+            )
+            entry.setTarget_(self)
+            entry.setRepresentedObject_(value)
+            if abs(current - value) < 0.01:
+                entry.setState_(1)
+            size_menu.addItem_(entry)
+        size_item.setSubmenu_(size_menu)
+        menu.addItem_(size_item)
+
         item(
             "돌아다니기",
             "menuToggleWander:",
@@ -428,6 +467,9 @@ class BuddyController(NSObject):
     def menuRefresh_(self, _sender):
         self._refresh_now.set()
         self.show_bubble()
+
+    def menuSetScale_(self, sender):
+        self.set_scale(sender.representedObject())
 
     def menuToggleWander_(self, _sender):
         self.cfg["mascot"]["wander"] = not self.cfg["mascot"].get("wander", True)
