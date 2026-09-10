@@ -125,6 +125,7 @@ class BuddyController(NSObject):
 
         self.cfg = config.load()
         config.ensure_file()
+        self.force_mood = None   # --demo 로 지정한 표정. 실제 사용량을 덮어쓴다.
         self.state = sprite.MascotState()
         self.notifier = Notifier(self.cfg)
 
@@ -263,7 +264,7 @@ class BuddyController(NSObject):
         if pending is None:
             return
         self.snapshot = pending
-        self.state.mood = pending.mood
+        self.state.mood = self.force_mood or pending.mood
         self.notifier.update(pending)
         if self.bubble_window.isVisible():
             self._render_bubble()
@@ -598,11 +599,14 @@ class BuddyController(NSObject):
         NSApp().terminate_(self)
 
 
-def run() -> None:
+def run(force_mood: str | None = None) -> None:
     app = NSApplication.sharedApplication()
     app.setActivationPolicy_(NSApplicationActivationPolicyAccessory)
 
     controller = BuddyController.alloc().init()
+    if force_mood:
+        controller.force_mood = force_mood
+        controller.state.mood = force_mood
     timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
         FRAME_INTERVAL, controller, "tick:", None, True
     )

@@ -35,10 +35,10 @@ _BASE = [
 ]
 _LEGS_STAND = ["   # #  # #   ", "   # #  # #   "]
 
-# 다 써 버렸을 때. 바닥에 눌린 듯 납작하게 퍼지고 다리는 양옆으로 뻗는다.
+# 다 써 버렸을 때. 바닥에 눌린 듯 납작하게 퍼진다.
 # 머리와 눈, 팔 위치는 서 있을 때 그대로 두어야 같은 녀석으로 보인다.
 # 높이는 9줄로 맞춰야 바닥선이 어긋나지 않는다.
-_LYING = [
+_LYING_OUT = [          # 날숨
     "              ",
     "              ",
     "              ",
@@ -47,7 +47,18 @@ _LYING = [
     "   ########   ",
     "  #oo####oo#  ",
     "##############",
-    "###  ####  ###",
+    "##############",
+]
+_LYING_IN = [           # 들숨 — 바닥은 그대로 두고 등만 한 칸 부푼다
+    "              ",
+    "              ",
+    "              ",
+    "              ",
+    "   ########   ",
+    "   ########   ",
+    "  #oo####oo#  ",
+    "##############",
+    "##############",
 ]
 
 
@@ -114,9 +125,10 @@ def cell_size(size: float) -> int:
 def frame_rows(st: MascotState) -> list[str]:
     """현재 상태에 맞는 도안 한 장을 만든다."""
     if st.mood == "exhausted":
-        # 완전히 뻗은 상태. 몸을 움직이면 (위아래로든 옆으로든) 지쳐 있는
-        # 게 아니라 뛰거나 부풀었다 꺼지는 것처럼 보인다. 땀방울만 떨어진다.
-        return list(_LYING)
+        # 숨을 쉴 때 바닥에 닿은 아랫면은 그대로 두고 등만 한 칸 부푼다.
+        # 몸 전체를 위아래로 움직이면 제자리뛰기처럼, 옆으로 늘였다 줄이면
+        # 살이 쪘다 빠지는 것처럼 보인다.
+        return list(_LYING_IN if st.step_phase else _LYING_OUT)
 
     rows = list(_BASE)
 
@@ -309,9 +321,9 @@ def _draw_zzz(origin_x: int, origin_y: int, cell: int, grid_h: int, st: MascotSt
 def step(st: MascotState, t: float) -> None:
     """시간 t(초)에 맞춰 애니메이션 값을 갱신한다. 전부 칸 단위로만 움직인다."""
     if st.mood == "exhausted":
-        # 몸은 미동도 없다. 떨어지는 땀방울만 움직인다.
+        # 느리고 가쁜 숨. 몸이 바닥에서 뜨지 않도록 bob 은 쓰지 않는다.
         st.bob = 0
-        st.step_phase = 0
+        st.step_phase = int(t * 0.6) % 2
         st.jitter = 0
         st.zzz = (t * 0.7) % 1.0
         return

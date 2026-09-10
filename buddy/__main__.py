@@ -5,6 +5,9 @@
     python -m buddy --json       JSON 으로 출력 (다른 도구에 연결할 때)
     python -m buddy --calibrate 90
                                  Claude Code 가 알려주는 실제 퍼센트에 눈금 맞추기
+    python -m buddy --demo exhausted
+                                 표정을 고정해서 확인 (happy busy worried panic
+                                 exhausted sleepy). 사용량과 무관하게 그 모습으로 뜬다.
     python -m buddy --install-agent / --uninstall-agent
 """
 
@@ -55,6 +58,16 @@ def main(argv: list[str] | None = None) -> int:
         print(__doc__)
         return 0
 
+    if flag == "--demo":
+        moods = ["happy", "busy", "worried", "panic", "exhausted", "sleepy"]
+        if len(args) < 2 or args[1] not in moods:
+            print("사용법: python -m buddy --demo <표정>")
+            print("  " + " | ".join(moods))
+            return 1
+        demo_mood = args[1]
+    else:
+        demo_mood = None
+
     from . import single
 
     if not single.acquire():
@@ -65,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from .app import run
 
-    run()
+    run(demo_mood)
     return 0
 
 
