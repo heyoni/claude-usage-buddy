@@ -136,7 +136,8 @@ class BuddyController(NSObject):
         self._refresh_now = threading.Event()
 
         scale = float(self.cfg["mascot"].get("scale") or 1.0)
-        self.size = BASE_SIZE * max(0.5, min(3.0, scale))
+        # 창 크기와 위치를 정수로 맞춰야 도트가 다시 샘플링되지 않는다
+        self.size = float(round(BASE_SIZE * max(0.5, min(3.0, scale))))
         self.speed = WALK_SPEED * float(self.cfg["mascot"].get("speed") or 1.0)
 
         self.pos_x = None
@@ -223,8 +224,17 @@ class BuddyController(NSObject):
 
     @objc.python_method
     def _sync_window(self) -> None:
+        """창을 정수 좌표에 붙인다.
+
+        걷는 속도는 프레임당 1.5칸처럼 소수로 나오는데, 창이 소수점 위치에
+        놓이면 macOS 가 내용을 다시 샘플링해서 도트가 흐려진다. 좌표 자체는
+        실수로 두어 움직임은 매끄럽게 하고, 화면에 놓을 때만 반올림한다.
+        """
         self.window.setFrameOrigin_(
-            NSMakePoint(self.pos_x - self.size / 2, self.pos_y - self.size / 2)
+            NSMakePoint(
+                round(self.pos_x - self.size / 2),
+                round(self.pos_y - self.size / 2),
+            )
         )
 
     # ---------- 사용량 갱신 ----------
@@ -422,11 +432,12 @@ class BuddyController(NSObject):
         """마스코트 크기를 바로 바꾼다. 다시 실행할 필요 없다."""
         value = max(0.4, min(3.0, float(value)))
         self.cfg["mascot"]["scale"] = value
-        self.size = BASE_SIZE * value
+        self.size = float(round(BASE_SIZE * value))
 
         frame = self.window.frame()
         self.window.setFrame_display_(
-            NSMakeRect(frame.origin.x, frame.origin.y, self.size, self.size), True
+            NSMakeRect(round(frame.origin.x), round(frame.origin.y), self.size, self.size),
+            True,
         )
         self.view.setFrame_(NSMakeRect(0, 0, self.size, self.size))
         self._clamp()
@@ -502,7 +513,8 @@ class BuddyController(NSObject):
         x = max(frame.origin.x + 6, min(frame.origin.x + frame.size.width - size.width - 6, x))
         if y + size.height > frame.origin.y + frame.size.height:
             y = self.pos_y - sprite.bottom_offset(self.size) - gap - size.height
-        self.bubble_view.setTailOffset_(self.pos_x - (x + size.width / 2))
+        x, y = round(x), round(y)
+        self.bubble_view.setTailOffset_(round(self.pos_x) - (x + size.width / 2))
         self.bubble_window.setFrameOrigin_(NSMakePoint(x, y))
 
     # ---------- 메뉴 ----------
