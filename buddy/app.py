@@ -244,6 +244,9 @@ class BuddyController(NSObject):
         while True:
             try:
                 self.index.refresh()
+                # 기준 금액은 매번 파일에서 다시 읽는다.
+                # --calibrate 로 맞춘 값이 재시작 없이 반영되도록.
+                self.cfg["block_cost_limit"] = config.load().get("block_cost_limit")
                 self._pending = summarize(
                     self.index.entries,
                     self.cfg["block_hours"],
