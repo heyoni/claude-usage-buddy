@@ -88,15 +88,19 @@ def main() -> None:
 
     NSGraphicsContext.restoreGraphicsState()
 
-    # 말풍선은 뷰 캐시로 따로 그려서 합친다
+    # 말풍선은 뷰의 그리기 코드를 그대로 호출한다.
+    # 캐시 비트맵으로 합치면 뷰의 불투명 배경까지 같이 딸려온다.
     view = BubbleView.alloc().initWithFrame_(NSMakeRect(0, 0, bubble_w, bubble_h))
     view.setRows_(rows)
-    bubble_rep = view.bitmapImageRepForCachingDisplayInRect_(view.bounds())
-    view.cacheDisplayInRect_toBitmapImageRep_(view.bounds(), bubble_rep)
 
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.setCurrentContext_(ctx)
-    bubble_rep.drawAtPoint_(NSMakePoint(20, CELL + 20))
+    from AppKit import NSAffineTransform as _TF
+
+    tf = _TF.transform()
+    tf.translateXBy_yBy_(20, CELL + 20)
+    tf.concat()
+    view.drawRect_(view.bounds())
     NSGraphicsContext.restoreGraphicsState()
 
     from AppKit import NSPNGFileType

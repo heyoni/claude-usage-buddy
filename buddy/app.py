@@ -35,11 +35,11 @@ from .bubble import BubbleView, measure, rows_from_snapshot
 from .notify import Notifier
 from .usage import UsageIndex, summarize
 
-BASE_SIZE = 106.0        # 마스코트 창 한 변 (배율 1.0 = 메뉴의 "보통")
+BASE_SIZE = 132.0        # 마스코트 창 한 변 (배율 1.0 = 메뉴의 "보통", 여백 포함)
 WALK_SPEED = 46.0        # 초당 이동 픽셀
 FRAME_INTERVAL = 1.0 / 30.0
 DRAG_THRESHOLD = 4.0     # 이만큼 넘게 움직이면 클릭이 아니라 끌기로 본다
-SCALES = [("아주 작게", 0.6), ("작게", 0.8), ("보통", 1.0), ("크게", 1.3), ("아주 크게", 1.7)]
+SCALES = [("아주 작게", 0.6), ("작게", 0.8), ("보통", 1.0), ("크게", 1.4), ("아주 크게", 1.7)]
 LONG_PRESS_SECONDS = 0.8    # 이만큼 누르고 있으면 말풍선을 고정한다
 FADE_SECONDS = 0.28         # 사라질 때 투명해지는 시간
 

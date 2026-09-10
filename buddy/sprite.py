@@ -16,9 +16,11 @@ OUTLINE = NSColor.colorWithSRGBRed_green_blue_alpha_(0.965, 0.937, 0.886, 0.92)
 SHADOW = NSColor.colorWithSRGBRed_green_blue_alpha_(0.0, 0.0, 0.0, 0.13)
 SWEAT = NSColor.colorWithSRGBRed_green_blue_alpha_(0.408, 0.706, 0.925, 1.0)
 ALERT = NSColor.colorWithSRGBRed_green_blue_alpha_(0.851, 0.341, 0.298, 1.0)
+SPARK = NSColor.colorWithSRGBRed_green_blue_alpha_(1.0, 1.0, 1.0, 1.0)
 
 GRID_W = 14
 GRID_H = 9
+MARGIN_CELLS = 4   # 도안 양옆·위아래로 남겨 두는 여백 (땀방울, z 자리)
 
 # 도트 도안. '#' 몸통, 'o' 눈, ' ' 빈칸
 #   위 두 줄은 머리, 가운데 튀어나온 두 줄은 팔, 아래 두 줄은 다리
@@ -88,7 +90,7 @@ def bottom_offset(size: float) -> float:
 
 def cell_size(size: float) -> int:
     """창 크기에 맞는 도트 한 칸 크기(정수)."""
-    return max(2, int(size / (GRID_W + 3)))
+    return max(2, int(size / (GRID_W + MARGIN_CELLS * 2)))
 
 
 def frame_rows(st: MascotState) -> list[str]:
@@ -177,7 +179,7 @@ def draw(width: float, height: float, st: MascotState) -> None:
                 NSBezierPath.bezierPathWithRect_(rect(c, r)).fill()
 
     if st.mood in ("worried", "panic"):
-        _draw_sweat(origin_x, origin_y, cell, grid_h, st)
+        _draw_sweat(rect, filled, st)
     if st.mood == "sleepy":
         _draw_zzz(origin_x, origin_y, cell, grid_h, st)
 
@@ -204,18 +206,46 @@ def _draw_shadow(width: float, origin_y: int, cell: int, st: MascotState) -> Non
     ).fill()
 
 
-def _draw_sweat(origin_x: int, origin_y: int, cell: int, grid_h: int, st: MascotState) -> None:
-    """머리 옆에서 흘러내리는 땀방울. 사용량이 많을 때만 나온다."""
-    drop = int(st.zzz * 3)
-    # 팔 끝이 아니라 머리 바로 옆에 붙여야 몸에서 떨어져 나온 것처럼 보인다
-    col = GRID_W - 2 if st.facing > 0 else 1
-    x = origin_x + col * cell
-    y = origin_y + (grid_h - 1 - drop) * cell
+# 물방울 도트. 위가 뾰족하고 아래가 둥글다.
+_DROP_PATTERN = [
+    ".#.",
+    "###",
+    "###",
+    "###",
+]
+
+
+def _draw_sweat(rect, body: set[tuple[int, int]], st: MascotState) -> None:
+    """머리 옆으로 흘러내리는 땀방울. 사용량이 많을 때만 나온다.
+
+    한 칸짜리 점은 무슨 표시인지 알기 어려워서, 테두리까지 있는 물방울
+    모양으로 몸통과 같은 배색 규칙을 따라 그린다. 팔과 겹치지 않도록
+    몸통 바깥 여백에 두고, 테두리도 몸통 위에는 찍지 않는다.
+    """
+    # 머리 오른쪽 위 모서리에 붙여야 몸에서 난 땀처럼 보인다.
+    # 도안 위쪽 여백에 두므로 팔(3~4행)과 겹칠 일이 없다.
+    fall = int(st.zzz * 2)
+    left = GRID_W - 1 if st.facing > 0 else -2
+    top = -2 + fall
+
+    cells = {
+        (left + c, top + r)
+        for r, line in enumerate(_DROP_PATTERN)
+        for c, ch in enumerate(line)
+        if ch == "#"
+    }
+
+    OUTLINE.setFill()
+    for (col, row) in _outline_cells(cells) - body:
+        NSBezierPath.bezierPathWithRect_(rect(col, row)).fill()
+
     (ALERT if st.mood == "panic" else SWEAT).setFill()
-    NSBezierPath.bezierPathWithRect_(NSMakeRect(x, y, cell, cell)).fill()
-    NSBezierPath.bezierPathWithRect_(
-        NSMakeRect(x + cell // 4, y + cell, max(1, cell // 2), max(1, cell // 2))
-    ).fill()
+    for (col, row) in cells:
+        NSBezierPath.bezierPathWithRect_(rect(col, row)).fill()
+
+    # 방울 안쪽 반짝임 한 칸
+    SPARK.colorWithAlphaComponent_(0.75).setFill()
+    NSBezierPath.bezierPathWithRect_(rect(left, top + 2)).fill()
 
 
 _Z_PATTERN = ["###", "..#", ".#.", "#..", "###"]

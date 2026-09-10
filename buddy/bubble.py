@@ -1,4 +1,9 @@
-"""클릭했을 때 뜨는 말풍선."""
+"""클릭했을 때 뜨는 말풍선.
+
+마스코트와 같은 도트 감성으로 그린다. 모서리는 둥글리지 않고 칸을 덜어내고,
+테두리와 꼬리도 칸을 쌓아 만든다. 그림자도 흐리지 않고 한 칸 밀어 찍는다.
+한글은 도트 폰트로 찍을 수 없어서 글자만 시스템 폰트를 쓴다.
+"""
 
 from __future__ import annotations
 
@@ -9,86 +14,47 @@ from AppKit import (
     NSFont,
     NSFontAttributeName,
     NSForegroundColorAttributeName,
+    NSFontWeightMedium,
     NSGraphicsContext,
-    NSShadow,
     NSView,
 )
-from Foundation import NSMakePoint, NSMakeRect, NSMakeSize, NSString
+from Foundation import NSMakePoint, NSMakeRect, NSString
 
 from .usage import Snapshot, fmt_duration, fmt_tokens
 
-PAD_X = 16.0
-PAD_TOP = 13.0
-PAD_BOTTOM = 17.0
-CONTENT_W = 248.0
-TAIL_H = 11.0
-TAIL_W = 18.0
-CHAMFER = 6.0
-BAR_SEGMENTS = 22
+P = 3.0                 # 도트 한 칸
+BORDER = 3.0            # 테두리 두께 (한 칸)
+CORNER = 2 * P          # 모서리에서 덜어내는 크기
+PAD_X = 12.0
+PAD_TOP = 10.0
+PAD_BOTTOM = 12.0
+CONTENT_W = 196.0
+TAIL_W = 6 * P
+TAIL_H = 3 * P
 
-H_TITLE = 25.0
-H_ROW = 19.0
-H_BAR = 26.0
-H_DIVIDER = 12.0
-H_NOTE = 16.0
+H_TITLE = 24.0
+H_ROW = 20.0
+H_BAR = 24.0
+H_NOTE = 17.0
 H_GAP = 6.0
+
+_HEIGHTS = {"title": H_TITLE, "row": H_ROW, "bar": H_BAR, "note": H_NOTE, "gap": H_GAP}
 
 
 def _rgb(r, g, b, a=1.0):
     return NSColor.colorWithSRGBRed_green_blue_alpha_(r, g, b, a)
 
 
-LIGHT = {
-    "bg": _rgb(1.0, 0.996, 0.988, 0.98),
-    "border": _rgb(0.0, 0.0, 0.0, 0.10),
-    "text": _rgb(0.16, 0.14, 0.13),
-    "dim": _rgb(0.52, 0.48, 0.45),
-    "track": _rgb(0.0, 0.0, 0.0, 0.08),
-}
-DARK = {
-    "bg": _rgb(0.16, 0.148, 0.137, 0.98),
-    "border": _rgb(1.0, 1.0, 1.0, 0.12),
-    "text": _rgb(0.949, 0.925, 0.898),
-    "dim": _rgb(0.60, 0.565, 0.529),
-    "track": _rgb(1.0, 1.0, 1.0, 0.10),
-}
+# 마스코트와 같은 배색
+INK = _rgb(0.169, 0.161, 0.153)          # 몸통 색 = 말풍선 바탕
+CREAM = _rgb(0.965, 0.937, 0.886)        # 눈·테두리 색 = 글자
+CREAM_DIM = _rgb(0.965, 0.937, 0.886, 0.55)
+TRACK = _rgb(0.965, 0.937, 0.886, 0.16)
+DROP = _rgb(0.0, 0.0, 0.0, 0.28)
 
-BAR_OK = _rgb(0.42, 0.647, 0.494)
-BAR_WARN = _rgb(0.851, 0.467, 0.341)
-BAR_DANGER = _rgb(0.773, 0.271, 0.231)
-
-
-def _chamfered(rect, c: float):
-    """모서리를 둥글리는 대신 45도로 잘라낸 사각형. 도트 그림과 결이 맞는다."""
-    x, y = rect.origin.x, rect.origin.y
-    w, h = rect.size.width, rect.size.height
-    points = [
-        (x + c, y), (x + w - c, y), (x + w, y + c), (x + w, y + h - c),
-        (x + w - c, y + h), (x + c, y + h), (x, y + h - c), (x, y + c),
-    ]
-    path = NSBezierPath.bezierPath()
-    path.moveToPoint_(NSMakePoint(*points[0]))
-    for point in points[1:]:
-        path.lineToPoint_(NSMakePoint(*point))
-    path.closePath()
-    return path
-
-
-def _stepped_tail(tip_x: float):
-    """계단식 꼬리. 매끈한 삼각형 대신 폭이 줄어드는 칸을 쌓아 만든다."""
-    step_h = TAIL_H / 3.0
-    top = TAIL_H + 2.0
-    path = NSBezierPath.bezierPath()
-    for i in range(3):
-        w = TAIL_W * (1.0 - i / 3.0)
-        path.appendBezierPathWithRect_(
-            NSMakeRect(tip_x - w / 2, top - (i + 1) * step_h, w, step_h + 0.5)
-        )
-    return path
-
-
-def _attrs(font, color):
-    return {NSFontAttributeName: font, NSForegroundColorAttributeName: color}
+BAR_OK = _rgb(0.451, 0.729, 0.541)
+BAR_WARN = _rgb(0.878, 0.514, 0.349)
+BAR_DANGER = _rgb(0.851, 0.310, 0.267)
 
 
 def bar_color(percent: float):
@@ -100,83 +66,92 @@ def bar_color(percent: float):
 
 
 def rows_from_snapshot(snap: Snapshot) -> list[dict]:
-    """말풍선에 그릴 줄 목록을 만든다."""
+    """말풍선에 그릴 줄 목록. 지금 블록만 보여주고 나머지는 CLI 에 맡긴다."""
     if not snap.has_data:
         return [
             {"type": "title", "text": "Claude 사용량"},
-            {"type": "note", "text": "아직 기록이 없어요."},
-            {"type": "note", "text": "Claude Code를 한 번 쓰고 오면 채워집니다."},
+            {"type": "note", "text": "아직 기록이 없어요"},
         ]
 
     rows: list[dict] = [{"type": "title", "text": "Claude 사용량"}]
 
     if snap.block is None:
         rows.append({"type": "row", "left": "5시간 블록", "right": "쉬는 중", "dim": True})
-        rows.append({"type": "divider"})
-    else:
-        rows.append(
-            {
-                "type": "row",
-                "left": "5시간 블록",
-                "right": f"{fmt_duration(snap.block_remaining)} 남음",
-                "dim": True,
-            }
-        )
-        rows.append({"type": "bar", "percent": snap.percent})
-        rows.append(
-            {
-                "type": "row",
-                "left": f"${snap.block_cost:.2f}",
-                "right": f"{fmt_tokens(snap.block_tokens)} tok",
-                "strong": True,
-            }
-        )
-        rows.append({"type": "divider"})
+        return rows
 
     rows.append(
         {
             "type": "row",
-            "left": "오늘",
-            "right": f"${snap.today_cost:.2f} · {fmt_tokens(snap.today_tokens)}",
+            "left": "5시간 블록",
+            "right": f"{fmt_duration(snap.block_remaining)} 남음",
+            "dim": True,
         }
     )
+    rows.append({"type": "bar", "percent": snap.percent})
     rows.append(
         {
             "type": "row",
-            "left": "최근 7일",
-            "right": f"${snap.week_cost:.2f} · {fmt_tokens(snap.week_tokens)}",
+            "left": f"${snap.block_cost:.2f}",
+            "right": f"{fmt_tokens(snap.block_tokens)} tok",
+            "strong": True,
         }
     )
-
-    rows.append({"type": "gap"})
-    if snap.by_model:
-        total = sum(cost for _, cost in snap.by_model) or 1.0
-        share = " · ".join(
-            f"{name} {cost / total * 100:.0f}%" for name, cost in snap.by_model[:3]
-        )
-        rows.append({"type": "note", "text": f"오늘 사용 모델  {share}"})
-
-    rows.append({"type": "note", "text": "금액은 API 정가 환산 추정치예요"})
     return rows
 
 
 def measure(rows: list[dict]) -> tuple[float, float]:
-    height = PAD_TOP + PAD_BOTTOM + TAIL_H
+    height = PAD_TOP + PAD_BOTTOM + BORDER * 2 + TAIL_H
     for row in rows:
-        kind = row["type"]
-        height += {
-            "title": H_TITLE,
-            "row": H_ROW,
-            "bar": H_BAR,
-            "divider": H_DIVIDER,
-            "note": H_NOTE,
-            "gap": H_GAP,
-        }[kind]
-    return CONTENT_W + PAD_X * 2, height
+        height += _HEIGHTS[row["type"]]
+    return CONTENT_W + PAD_X * 2 + BORDER * 2, height
+
+
+def _notched_rect(x, y, w, h, c):
+    """네 모서리에서 정사각형을 하나씩 덜어낸 사각형. 도트 그림의 둥근 모서리."""
+    points = [
+        (x + c, y), (x + w - c, y), (x + w - c, y + c), (x + w, y + c),
+        (x + w, y + h - c), (x + w - c, y + h - c), (x + w - c, y + h), (x + c, y + h),
+        (x + c, y + h - c), (x, y + h - c), (x, y + c), (x + c, y + c),
+    ]
+    path = NSBezierPath.bezierPath()
+    path.moveToPoint_(NSMakePoint(*points[0]))
+    for point in points[1:]:
+        path.lineToPoint_(NSMakePoint(*point))
+    path.closePath()
+    return path
+
+
+def _silhouette(width: float, height: float, tip_x: float, inset: float):
+    """말풍선 바깥선(inset=0)과 안쪽 면(inset=BORDER)을 같은 규칙으로 만든다."""
+    body_bottom = TAIL_H
+    body = _notched_rect(
+        inset,
+        body_bottom + inset,
+        width - inset * 2,
+        height - body_bottom - inset * 2,
+        CORNER - inset,
+    )
+
+    if inset == 0:
+        # 아래로 갈수록 좁아지는 칸 세 개
+        steps = [(6 * P, P), (4 * P, P), (2 * P, P)]
+        y = body_bottom
+        for w, h in steps:
+            y -= h
+            body.appendBezierPathWithRect_(NSMakeRect(tip_x - w / 2, y, w, h))
+    else:
+        # 바깥선보다 한 칸씩 좁고 한 칸 짧게. 몸통과 만나는 지점은 겹쳐서 이어 붙인다.
+        body.appendBezierPathWithRect_(
+            NSMakeRect(tip_x - 2 * P, body_bottom - P, 4 * P, P + BORDER)
+        )
+        body.appendBezierPathWithRect_(
+            NSMakeRect(tip_x - P, body_bottom - 2 * P, 2 * P, P)
+        )
+    return body
 
 
 class BubbleView(NSView):
-    """말풍선 본체. 아래쪽 가운데에 꼬리가 달린다."""
+    """말풍선 본체. 아래쪽에 계단식 꼬리가 달린다."""
 
     def initWithFrame_(self, frame):
         self = objc.super(BubbleView, self).initWithFrame_(frame)
@@ -199,103 +174,93 @@ class BubbleView(NSView):
     def isFlipped(self):
         return False
 
-    @objc.python_method
-    def _palette(self):
-        appearance = self.effectiveAppearance()
-        name = appearance.bestMatchFromAppearancesWithNames_(
-            ["NSAppearanceNameAqua", "NSAppearanceNameDarkAqua"]
-        )
-        return DARK if name == "NSAppearanceNameDarkAqua" else LIGHT
-
     def drawRect_(self, _rect):
         bounds = self.bounds()
-        width = bounds.size.width
-        height = bounds.size.height
-        pal = self._palette()
+        width, height = bounds.size.width, bounds.size.height
+        tip_x = width / 2 + self._tail_dx
 
-        body = NSMakeRect(1.0, TAIL_H + 1.0, width - 2.0, height - TAIL_H - 2.0)
-        path = _chamfered(body, CHAMFER)
-        path.appendBezierPath_(_stepped_tail(width / 2 + self._tail_dx))
+        ctx = NSGraphicsContext.currentContext()
+        ctx.saveGraphicsState()
+        ctx.setShouldAntialias_(False)
 
-        NSGraphicsContext.currentContext().saveGraphicsState()
-        shadow = NSShadow.alloc().init()
-        shadow.setShadowColor_(NSColor.colorWithSRGBRed_green_blue_alpha_(0, 0, 0, 0.22))
-        shadow.setShadowBlurRadius_(14.0)
-        shadow.setShadowOffset_(NSMakeSize(0, -3))
-        shadow.set()
-        pal["bg"].setFill()
-        path.fill()
-        NSGraphicsContext.currentContext().restoreGraphicsState()
+        # 흐린 그림자 대신 한 칸 밀어 찍은 단단한 그림자
+        shadow = _silhouette(width - P, height - P, tip_x, 0)
+        transform = NSBezierPath.bezierPath()
+        transform.appendBezierPath_(shadow)
+        DROP.setFill()
+        self._offset(transform, P, -P).fill()
 
-        pal["border"].setStroke()
-        path.setLineWidth_(1.0)
-        path.stroke()
+        CREAM.setFill()
+        _silhouette(width - P, height - P, tip_x, 0).fill()
+        INK.setFill()
+        _silhouette(width - P, height - P, tip_x, BORDER).fill()
 
-        self._draw_rows(width, height, pal)
+        ctx.restoreGraphicsState()
+        self._draw_rows(width, height)
 
     @objc.python_method
-    def _draw_rows(self, width, height, pal):
-        x = PAD_X
-        y = height - PAD_TOP
-        inner = width - PAD_X * 2
+    def _offset(self, path, dx, dy):
+        from AppKit import NSAffineTransform
+
+        tf = NSAffineTransform.transform()
+        tf.translateXBy_yBy_(dx, dy)
+        return tf.transformBezierPath_(path)
+
+    @objc.python_method
+    def _draw_rows(self, width, height):
+        x = BORDER + PAD_X
+        y = height - P - BORDER - PAD_TOP
+        inner = width - P - (BORDER + PAD_X) * 2
 
         for row in self._rows:
             kind = row["type"]
+            y -= _HEIGHTS[kind]
             if kind == "title":
-                y -= H_TITLE
-                self._text(row["text"], x, y + 5, NSFont.boldSystemFontOfSize_(13.0), pal["text"])
+                self._text(row["text"], x, y + 5, NSFont.boldSystemFontOfSize_(13.0), CREAM)
             elif kind == "row":
-                y -= H_ROW
-                font = NSFont.systemFontOfSize_(12.0)
-                if row.get("strong"):
-                    font = NSFont.boldSystemFontOfSize_(13.0)
-                left_color = pal["dim"] if row.get("dim") else pal["text"]
-                right_color = pal["dim"] if row.get("dim") else pal["text"]
-                if row.get("strong"):
-                    left_color = BAR_WARN
-                self._text(row["left"], x, y + 3, font, left_color)
-                self._text_right(row["right"], x + inner, y + 3, font, right_color)
+                strong = row.get("strong", False)
+                font = _num_font(13.5) if strong else NSFont.systemFontOfSize_(12.0)
+                left = BAR_WARN if strong else (CREAM_DIM if row.get("dim") else CREAM)
+                right = CREAM if strong else (CREAM_DIM if row.get("dim") else CREAM)
+                self._text(row["left"], x, y + 3, font, left)
+                self._text_right(row["right"], x + inner, y + 3, font, right)
             elif kind == "bar":
-                y -= H_BAR
-                self._bar(x, y + 8, inner, row["percent"], pal)
-            elif kind == "divider":
-                y -= H_DIVIDER
-                line = NSBezierPath.bezierPath()
-                line.moveToPoint_(NSMakePoint(x, y + H_DIVIDER / 2))
-                line.lineToPoint_(NSMakePoint(x + inner, y + H_DIVIDER / 2))
-                line.setLineWidth_(1.0)
-                pal["border"].setStroke()
-                line.stroke()
-            elif kind == "gap":
-                y -= H_GAP
+                self._bar(x, y + 8, inner, row["percent"])
             elif kind == "note":
-                y -= H_NOTE
-                self._text(row["text"], x, y + 2, NSFont.systemFontOfSize_(10.5), pal["dim"])
+                self._text(row["text"], x, y + 3, NSFont.systemFontOfSize_(11.5), CREAM_DIM)
 
     @objc.python_method
-    def _bar(self, x, y, width, percent, pal):
-        height = 9.0
+    def _bar(self, x, y, width, percent):
+        ctx = NSGraphicsContext.currentContext()
+        ctx.saveGraphicsState()
+        ctx.setShouldAntialias_(False)
+
+        height = 3 * P
+        font = _num_font(11.5)
         label = f"{percent:.0f}%"
-        font = NSFont.boldSystemFontOfSize_(11.0)
-        label_w = self._width(label, font) + 6.0
+        label_w = self._width(label, font) + 8.0
         track_w = width - label_w
 
-        pal["track"].setFill()
-        NSBezierPath.bezierPathWithRect_(NSMakeRect(x, y, track_w, height)).fill()
+        seg = 2 * P
+        gap = P
+        count = max(1, int((track_w + gap) // (seg + gap)))
+        used = count * (seg + gap) - gap
 
-        color = bar_color(percent)
-        color.setFill()
-        gap = 1.5
-        seg_w = (track_w - gap * (BAR_SEGMENTS - 1)) / BAR_SEGMENTS
-        lit = int(round(BAR_SEGMENTS * min(percent, 100.0) / 100.0))
-        for i in range(lit):
+        TRACK.setFill()
+        for i in range(count):
             NSBezierPath.bezierPathWithRect_(
-                NSMakeRect(x + i * (seg_w + gap), y, seg_w, height)
+                NSMakeRect(x + i * (seg + gap), y, seg, height)
             ).fill()
 
-        self._text_right(label, x + width, y - 2, font, color)
+        bar_color(percent).setFill()
+        lit = int(round(count * min(percent, 100.0) / 100.0))
+        for i in range(lit):
+            NSBezierPath.bezierPathWithRect_(
+                NSMakeRect(x + i * (seg + gap), y, seg, height)
+            ).fill()
 
-    # ---------- 텍스트 헬퍼 ----------
+        ctx.restoreGraphicsState()
+        self._text_right(label, x + used + label_w, y - 2, font, bar_color(percent))
 
     @objc.python_method
     def _text(self, text, x, y, font, color):
@@ -306,9 +271,18 @@ class BubbleView(NSView):
     @objc.python_method
     def _width(self, text, font):
         return NSString.stringWithString_(text).sizeWithAttributes_(
-            _attrs(font, LIGHT["text"])
+            _attrs(font, CREAM)
         ).width
 
     @objc.python_method
     def _text_right(self, text, right_x, y, font, color):
         self._text(text, right_x - self._width(text, font), y, font, color)
+
+
+def _attrs(font, color):
+    return {NSFontAttributeName: font, NSForegroundColorAttributeName: color}
+
+
+def _num_font(size: float):
+    """숫자 폭이 일정한 폰트. 값이 바뀌어도 자리가 흔들리지 않는다."""
+    return NSFont.monospacedDigitSystemFontOfSize_weight_(size, NSFontWeightMedium)
