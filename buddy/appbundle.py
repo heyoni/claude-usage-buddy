@@ -104,8 +104,8 @@ def install() -> Path:
         "CFBundleName": APP_NAME,
         "CFBundleDisplayName": APP_NAME,
         "CFBundleIdentifier": BUNDLE_ID,
-        "CFBundleVersion": "0.1.0",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleVersion": "0.1.1",
+        "CFBundleShortVersionString": "0.1.1",
         "CFBundlePackageType": "APPL",
         "CFBundleExecutable": "launcher",
         "LSUIElement": True,          # Dock 에 아이콘을 남기지 않는다 (마스코트가 곧 UI)

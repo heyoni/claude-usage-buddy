@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-usage-buddy"
-version = "0.1.0"
+version = "0.1.1"
 description = "맥 바탕화면을 돌아다니며 Claude Code 사용량을 알려주는 도트 마스코트"
 readme = "README.md"
 requires-python = ">=3.10"
