@@ -30,7 +30,7 @@ from AppKit import (
 )
 from Foundation import NSMakePoint, NSMakeRect, NSObject
 
-from . import autostart, config, sprite
+from . import autostart, bundle, config, hook, sprite
 from .bubble import BubbleView, measure, rows_from_snapshot
 from .notify import Notifier
 from .usage import UsageIndex, summarize
@@ -580,10 +580,17 @@ class BuddyController(NSObject):
             state=bool(self.cfg["mascot"].get("wander", True)),
         )
         item(
+            "Claude Code 켤 때 같이 띄우기",
+            "menuToggleHook:",
+            state=hook.is_installed(),
+        )
+        item(
             "로그인 시 자동 실행",
             "menuToggleAutostart:",
             state=autostart.is_enabled(),
         )
+        menu.addItem_(NSMenuItem.separatorItem())
+        item("눈금 맞추기…", "menuCalibrate:")
         item("설정 파일 열기", "menuOpenConfig:")
         menu.addItem_(NSMenuItem.separatorItem())
         item("종료", "menuQuit:")
@@ -609,6 +616,45 @@ class BuddyController(NSObject):
 
     def menuToggleAutostart_(self, _sender):
         autostart.toggle()
+
+    def menuToggleHook_(self, _sender):
+        if hook.is_installed():
+            hook.uninstall()
+        else:
+            hook.install()
+
+    def menuCalibrate_(self, _sender):
+        """Claude Code 가 알려주는 실제 퍼센트를 받아 기준을 맞춘다.
+
+        터미널 없이 쓰는 사람을 위한 대화상자. --calibrate 와 같은 일을 한다.
+        """
+        from AppKit import NSAlert, NSTextField
+
+        alert = NSAlert.alloc().init()
+        alert.setMessageText_("눈금 맞추기")
+        alert.setInformativeText_(
+            "Claude Code 에서 /usage 로 확인한 지금 사용률(%)을 넣어 주세요.\n"
+            "그 값이 되도록 100% 기준을 다시 계산합니다."
+        )
+        alert.addButtonWithTitle_("맞추기")
+        alert.addButtonWithTitle_("취소")
+        field = NSTextField.alloc().initWithFrame_(NSMakeRect(0, 0, 200, 24))
+        field.setPlaceholderString_("예: 90")
+        alert.setAccessoryView_(field)
+        alert.window().setInitialFirstResponder_(field)
+
+        NSApp().activateIgnoringOtherApps_(True)
+        if alert.runModal() != 1000:   # NSAlertFirstButtonReturn
+            return
+        try:
+            percent = float(field.stringValue().strip().rstrip("%"))
+        except ValueError:
+            return
+        from .cli import calibrate
+
+        calibrate(percent)
+        self._refresh_now.set()
+        self.show_bubble(pinned=True)
 
     def menuOpenConfig_(self, _sender):
         import subprocess

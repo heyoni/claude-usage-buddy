@@ -4,3 +4,8 @@ __pycache__/
 venv/
 .DS_Store
 *.egg-info/
+build/
+dist/
+packaging/build/
+packaging/dist/
+packaging/icon.icns

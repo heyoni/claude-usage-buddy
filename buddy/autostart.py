@@ -27,12 +27,11 @@ def enable() -> Path:
     PLIST_PATH.parent.mkdir(parents=True, exist_ok=True)
     project_root = str(Path(__file__).resolve().parent.parent)
 
-    # 설치된 명령이 있으면 그걸 쓰고, 없으면 저장소에서 모듈로 실행한다
-    console_script = Path(sys.executable).with_name("claude-usage-buddy")
-    if console_script.exists():
-        program = [str(console_script)]
-    else:
-        program = [sys.executable, "-m", "buddy"]
+    # 묶인 앱이면 앱 실행 파일, 설치된 명령이 있으면 그것, 아니면 저장소 모듈
+    from . import bundle
+
+    exe = bundle.executable()
+    program = [str(exe)] if exe.exists() else [sys.executable, "-m", "buddy"]
 
     payload = {
         "Label": LABEL,
