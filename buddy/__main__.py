@@ -1,15 +1,16 @@
 """엔트리 포인트.
 
-    python -m buddy              마스코트 실행
-    python -m buddy --cli        터미널에 사용량 출력
-    python -m buddy --json       JSON 으로 출력 (다른 도구에 연결할 때)
-    python -m buddy --calibrate 90
-                                 Claude Code 가 알려주는 실제 퍼센트에 눈금 맞추기
-    python -m buddy --demo exhausted
-                                 표정을 고정해서 확인 (happy busy worried panic
-                                 exhausted sleepy). 사용량과 무관하게 그 모습으로 뜬다.
-                                 cycle 을 주면 4초마다 차례로 돌아간다.
-    python -m buddy --install-agent / --uninstall-agent
+    claude-usage-buddy                 마스코트 실행
+    claude-usage-buddy --cli           터미널에 사용량 출력
+    claude-usage-buddy --json          JSON 으로 출력 (다른 도구에 연결할 때)
+    claude-usage-buddy --calibrate 90  Claude Code 가 알려주는 실제 퍼센트에 눈금 맞추기
+    claude-usage-buddy --demo <표정>   표정을 고정해서 확인
+                                       (happy busy worried panic exhausted sleepy,
+                                        cycle 을 주면 4초마다 차례로 돌아간다)
+    claude-usage-buddy --install-agent / --uninstall-agent
+                                       로그인 시 자동 실행 등록 / 해제
+
+설치하지 않고 저장소 안에서 바로 돌릴 때는 `python -m buddy` 도 같습니다.
 """
 
 from __future__ import annotations

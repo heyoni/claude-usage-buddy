@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-usage-buddy"
+version = "0.1.0"
+description = "맥 바탕화면을 돌아다니며 Claude Code 사용량을 알려주는 도트 마스코트"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["pyobjc-framework-Cocoa>=10.0"]
+
+[project.urls]
+Homepage = "https://github.com/heyoni/claude-usage-buddy"
+
+[project.scripts]
+claude-usage-buddy = "buddy.__main__:main"
+
+[tool.setuptools]
+packages = ["buddy"]
