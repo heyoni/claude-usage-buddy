@@ -27,6 +27,8 @@ claude-usage-buddy
 | 자리 옮기기 | **드래그** |
 | 크기 바꾸기 / 끄기 | **우클릭** → 메뉴 |
 | 터미널에서 숫자만 보기 | `claude-usage-buddy --cli` |
+| 터미널 없이 띄우기 | 런치패드에서 **Claude Usage Buddy** 더블클릭 |
+| Claude Code 켤 때 같이 띄우기 | `./install.sh --hook` |
 | 맥 켤 때마다 자동으로 띄우기 | `./install.sh --autostart` |
 
 퍼센트가 Claude Code 가 알려주는 값과 다르다면
@@ -85,29 +87,29 @@ cd claude-usage-buddy
 - `~/.claude-usage-buddy/venv` 에 가상환경을 만들고 의존성(PyObjC)을 설치합니다
 - 그 안에 이 패키지를 설치해 `claude-usage-buddy` 명령을 만듭니다
 - `~/.local/bin` 에 링크를 걸어 어느 폴더에서든 이름만으로 실행되게 합니다
+- `~/Applications/Claude Usage Buddy.app` 을 만듭니다 — 런치패드·Spotlight 에서 더블클릭으로 실행
 
 시스템 파이썬은 건드리지 않습니다.
 
-실행:
+### 띄우는 방법 세 가지
 
-```bash
-claude-usage-buddy
-```
+원하는 걸 골라 쓰세요. 여러 개 켜 둬도 마스코트는 한 마리만 뜹니다.
 
-`~/.local/bin` 이 PATH 에 없다면 셸 설정에 아래를 넣으세요.
+| 방법 | 언제 뜨나 | 설정 |
+| --- | --- | --- |
+| 앱 더블클릭 | 내가 켤 때 | 설치하면 바로 됨 |
+| Claude Code 연동 | `claude` 를 켤 때마다 | `./install.sh --hook` |
+| 로그인 시 자동 실행 | 맥을 켤 때마다 | `./install.sh --autostart` |
 
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
+터미널에서는 `claude-usage-buddy` 로도 뜹니다.
+`~/.local/bin` 이 PATH 에 없다면 셸 설정에 `export PATH="$HOME/.local/bin:$PATH"` 를 넣으세요.
 
-로그인할 때 자동으로 띄우려면:
+**Claude Code 연동**은 `~/.claude/settings.json` 의 `hooks.SessionStart` 에 항목을 하나 넣습니다.
+기존 훅은 건드리지 않고, 이미 켜 둔 세션에는 적용되지 않습니다 (다음 세션부터).
 
-```bash
-./install.sh --autostart
-```
+**로그인 시 자동 실행**은 `~/Library/LaunchAgents/com.github.claude-usage-buddy.plist` 를 등록합니다.
 
-`~/Library/LaunchAgents/com.github.claude-usage-buddy.plist` 를 만들어 등록합니다.
-되돌리려면 `./uninstall.sh` 를 실행하세요. 설정과 색인까지 지우려면 `rm -rf ~/.claude-usage-buddy`.
+전부 되돌리려면 `./uninstall.sh`. 설정과 색인, 가상환경까지 지우려면 `rm -rf ~/.claude-usage-buddy`.
 
 ---
 
@@ -223,8 +225,9 @@ $ claude-usage-buddy --json
 | `claude-usage-buddy --json` | JSON 으로 출력 |
 | `claude-usage-buddy --calibrate <퍼센트>` | 실제 사용률에 눈금 맞추기 |
 | `claude-usage-buddy --demo <표정>` | 표정 고정 (`cycle` 이면 순환) |
-| `claude-usage-buddy --install-agent` | 로그인 시 자동 실행 등록 |
-| `claude-usage-buddy --uninstall-agent` | 자동 실행 해제 |
+| `claude-usage-buddy --install-app` / `--uninstall-app` | 더블클릭용 앱 만들기 / 지우기 |
+| `claude-usage-buddy --install-hook` / `--uninstall-hook` | Claude Code 연동 / 해제 |
+| `claude-usage-buddy --install-agent` / `--uninstall-agent` | 로그인 시 자동 실행 / 해제 |
 
 ---
 
@@ -282,6 +285,8 @@ buddy/
 ├── app.py        창·이동·클릭·메뉴 (AppKit)
 ├── notify.py     알림 센터 알림
 ├── autostart.py  LaunchAgent 등록
+├── hook.py       Claude Code SessionStart 훅 등록
+├── appbundle.py  더블클릭용 .app 번들과 아이콘 생성
 ├── single.py     중복 실행 방지
 └── cli.py        터미널 출력
 tools/

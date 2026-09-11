@@ -7,6 +7,10 @@
     claude-usage-buddy --demo <표정>   표정을 고정해서 확인
                                        (happy busy worried panic exhausted sleepy,
                                         cycle 을 주면 4초마다 차례로 돌아간다)
+    claude-usage-buddy --install-app / --uninstall-app
+                                       ~/Applications 에 더블클릭용 앱 만들기 / 지우기
+    claude-usage-buddy --install-hook / --uninstall-hook
+                                       Claude Code 를 켤 때 같이 뜨게 / 해제
     claude-usage-buddy --install-agent / --uninstall-agent
                                        로그인 시 자동 실행 등록 / 해제
 
@@ -44,6 +48,33 @@ def main(argv: list[str] | None = None) -> int:
         from .cli import print_json
 
         print_json()
+        return 0
+    if flag == "--install-app":
+        from . import appbundle
+
+        path = appbundle.install()
+        print(f"앱을 만들었습니다: {path}")
+        print("런치패드나 Spotlight 에서 'Claude Usage Buddy' 로 찾을 수 있습니다.")
+        return 0
+    if flag == "--uninstall-app":
+        from . import appbundle
+
+        appbundle.uninstall()
+        print("앱을 지웠습니다.")
+        return 0
+    if flag == "--install-hook":
+        from . import hook
+
+        path = hook.install()
+        print(f"등록 완료: {path}")
+        print("다음에 Claude Code 를 켜면 마스코트가 같이 뜹니다.")
+        print("(이미 켜 둔 Claude Code 세션에는 적용되지 않습니다)")
+        return 0
+    if flag == "--uninstall-hook":
+        from . import hook
+
+        hook.uninstall()
+        print("Claude Code 연동을 해제했습니다.")
         return 0
     if flag == "--install-agent":
         from . import autostart

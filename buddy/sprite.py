@@ -162,13 +162,18 @@ def _shift(row: str, delta: int) -> str:
     return row
 
 
-def draw(width: float, height: float, st: MascotState) -> None:
-    """현재 그래픽 컨텍스트에 마스코트 한 프레임을 찍는다."""
+def draw(width: float, height: float, st: MascotState, cell: int | None = None) -> None:
+    """현재 그래픽 컨텍스트에 마스코트 한 프레임을 찍는다.
+
+    cell 을 주면 창 크기와 무관하게 그 칸 크기로 찍는다 (아이콘처럼
+    땀방울 여백이 필요 없는 곳에서 꽉 채우고 싶을 때).
+    """
     ctx = NSGraphicsContext.currentContext()
     ctx.saveGraphicsState()
     ctx.setShouldAntialias_(False)
 
-    cell = cell_size(min(width, height))
+    if cell is None:
+        cell = cell_size(min(width, height))
     rows = frame_rows(st)
     grid_h = len(rows)
 

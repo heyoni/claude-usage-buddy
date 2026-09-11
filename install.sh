@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# 가상환경을 만들고 claude-usage-buddy 명령을 설치한다.
-# --autostart 를 붙이면 로그인할 때 자동으로 뜬다.
+# 가상환경을 만들고 claude-usage-buddy 명령과 더블클릭용 앱을 설치한다.
+#   --hook       Claude Code 를 켤 때 같이 뜨게
+#   --autostart  로그인할 때 자동으로 뜨게
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,10 +22,21 @@ if [[ ":$PATH:" == *":$BIN_DIR:"* ]] || [[ -d "$BIN_DIR" ]]; then
   LINKED="$BIN_DIR/claude-usage-buddy"
 fi
 
-if [[ "${1:-}" == "--autostart" ]]; then
-  echo "==> 로그인 시 자동 실행 등록"
-  "$VENV_DIR/bin/claude-usage-buddy" --install-agent
-fi
+echo "==> 더블클릭용 앱 만들기"
+"$VENV_DIR/bin/claude-usage-buddy" --install-app
+
+for arg in "$@"; do
+  case "$arg" in
+    --hook)
+      echo "==> Claude Code 와 연동"
+      "$VENV_DIR/bin/claude-usage-buddy" --install-hook
+      ;;
+    --autostart)
+      echo "==> 로그인 시 자동 실행 등록"
+      "$VENV_DIR/bin/claude-usage-buddy" --install-agent
+      ;;
+  esac
+done
 
 echo
 echo "설치 완료."
@@ -38,5 +50,7 @@ if [[ -n "$LINKED" ]]; then
 else
   echo "  실행:  $VENV_DIR/bin/claude-usage-buddy"
 fi
+echo "  또는 런치패드에서 'Claude Usage Buddy' 더블클릭"
 echo
-echo "로그인할 때 자동으로 띄우려면:  ./install.sh --autostart"
+echo "Claude Code 를 켤 때 같이 띄우려면:  ./install.sh --hook"
+echo "로그인할 때 자동으로 띄우려면:      ./install.sh --autostart"

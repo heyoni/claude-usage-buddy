@@ -7,6 +7,8 @@ BIN_DIR="$HOME/.local/bin"
 
 if [[ -x "$VENV_DIR/bin/claude-usage-buddy" ]]; then
   "$VENV_DIR/bin/claude-usage-buddy" --uninstall-agent || true
+  "$VENV_DIR/bin/claude-usage-buddy" --uninstall-hook || true
+  "$VENV_DIR/bin/claude-usage-buddy" --uninstall-app || true
 fi
 pkill -f "\-m buddy" 2>/dev/null || true
 pkill -f "claude-usage-buddy" 2>/dev/null || true
