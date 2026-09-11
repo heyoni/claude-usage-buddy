@@ -14,6 +14,7 @@ from AppKit import (
     NSBackingStoreBuffered,
     NSColor,
     NSEvent,
+    NSEventModifierFlagControl,
     NSFloatingWindowLevel,
     NSMenu,
     NSMenuItem,
@@ -30,7 +31,7 @@ from AppKit import (
 )
 from Foundation import NSMakePoint, NSMakeRect, NSObject
 
-from . import autostart, bundle, config, hook, sprite
+from . import autostart, bundle, config, hook, remote, sprite
 from .bubble import BubbleView, measure, rows_from_snapshot
 from .notify import Notifier
 from .usage import UsageIndex, summarize
@@ -85,6 +86,10 @@ class MascotView(NSView):
         sprite.draw(bounds.size.width, bounds.size.height, self._controller.state)
 
     def mouseDown_(self, event):
+        # macOS 에서 Ctrl+클릭은 rightMouseDown 이 아니라 Ctrl 이 눌린 mouseDown 으로 온다
+        if event.modifierFlags() & NSEventModifierFlagControl:
+            self._controller.show_menu(event, self)
+            return
         location = NSEvent.mouseLocation()
         self._down_at = (location.x, location.y)
         self._grab = (
@@ -250,11 +255,14 @@ class BuddyController(NSObject):
                 # 기준 금액은 매번 파일에서 다시 읽는다.
                 # --calibrate 로 맞춘 값이 재시작 없이 반영되도록.
                 self.cfg["block_cost_limit"] = config.load().get("block_cost_limit")
+                # 서버 값은 실패해도 상관없다 — 없으면 로컬 추정으로 간다
+                server = remote.fetch() if self.cfg.get("use_server_usage", True) else None
                 self._pending = summarize(
                     self.index.entries,
                     self.cfg["block_hours"],
                     self.cfg.get("block_cost_limit"),
                     doze_after_seconds=self._doze_seconds(),
+                    remote=server,
                 )
             except Exception:  # 갱신 실패로 마스코트가 멈추면 안 된다
                 pass
@@ -536,8 +544,11 @@ class BuddyController(NSObject):
         x = self.pos_x - size.width / 2
         y = self.pos_y + sprite.top_offset(self.size) + gap
         x = max(frame.origin.x + 6, min(frame.origin.x + frame.size.width - size.width - 6, x))
-        if y + size.height > frame.origin.y + frame.size.height:
+        below = y + size.height > frame.origin.y + frame.size.height
+        if below:
+            # 위에 자리가 없으면 아래에 띄우고, 꼬리도 위(마스코트 쪽)를 가리키게 한다
             y = self.pos_y - sprite.bottom_offset(self.size) - gap - size.height
+        self.bubble_view.setTailAtTop_(below)
         x, y = round(x), round(y)
         self.bubble_view.setTailOffset_(round(self.pos_x) - (x + size.width / 2))
         self.bubble_window.setFrameOrigin_(NSMakePoint(x, y))

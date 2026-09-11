@@ -9,15 +9,19 @@ from .usage import UsageIndex, fmt_duration, fmt_tokens, summarize
 
 
 def _snapshot():
+    from . import remote
+
     cfg = config.load()
     index = UsageIndex(retention_days=cfg["retention_days"])
     index.refresh()
     minutes = float(cfg.get("doze_after_minutes") or 0)
+    server = remote.fetch() if cfg.get("use_server_usage", True) else None
     return summarize(
         index.entries,
         cfg["block_hours"],
         cfg.get("block_cost_limit"),
         doze_after_seconds=minutes * 60.0 if minutes > 0 else float("inf"),
+        remote=server,
     )
 
 
@@ -31,15 +35,24 @@ def print_report() -> None:
     filled = int(bar_width * min(snap.percent, 100) / 100)
     bar = "█" * filled + "░" * (bar_width - filled)
 
+    tag = "서버 값" if snap.source == "server" else f"로컬 추정 · 기준 ${snap.limit_cost:.2f}"
     print("Claude 사용량")
     print("─" * 40)
     if snap.block:
         print(f"5시간 블록   {bar} {snap.percent:.0f}%")
         print(f"             ${snap.block_cost:.2f} · {fmt_tokens(snap.block_tokens)} tok")
-        print(f"             {fmt_duration(snap.block_remaining)} 남음 "
-              f"(기준 ${snap.limit_cost:.2f})")
+        import datetime as _dt
+        clock = _dt.datetime.fromtimestamp(snap.block_resets_at).strftime("%H:%M") if snap.block_resets_at else "?"
+        print(f"             {clock} 초기화 · {fmt_duration(snap.remaining_now())} 남음 ({tag})")
     else:
         print("5시간 블록   쉬는 중")
+    if snap.week_percent is not None:
+        w_filled = int(bar_width * min(snap.week_percent, 100) / 100)
+        w_bar = "█" * w_filled + "░" * (bar_width - w_filled)
+        import datetime as _dt
+        when = _dt.datetime.fromtimestamp(snap.week_resets).strftime("%m/%d %H:%M") if snap.week_resets else "?"
+        print(f"7일 한도     {w_bar} {snap.week_percent:.0f}%")
+        print(f"             {when} 초기화")
     print("─" * 40)
     print(f"오늘         ${snap.today_cost:.2f} · {fmt_tokens(snap.today_tokens)} tok")
     print(f"최근 7일     ${snap.week_cost:.2f} · {fmt_tokens(snap.week_tokens)} tok")
@@ -97,8 +110,10 @@ def print_json() -> None:
                     "remaining_seconds": int(snap.block_remaining),
                 },
                 "today": {"cost_usd": round(snap.today_cost, 4), "tokens": snap.today_tokens},
-                "week": {"cost_usd": round(snap.week_cost, 4), "tokens": snap.week_tokens},
                 "by_model": [{"model": n, "cost_usd": round(c, 4)} for n, c in snap.by_model],
+                "source": snap.source,
+                "week": {"cost_usd": round(snap.week_cost, 4), "tokens": snap.week_tokens,
+                         "percent": snap.week_percent, "resets_at": snap.week_resets},
                 "idle_seconds": int(snap.idle_seconds) if snap.idle_seconds != float("inf") else None,
                 "dozing": snap.dozing,
                 "mood": snap.mood,

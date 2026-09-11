@@ -23,6 +23,8 @@ from AppKit import (
 )
 from Foundation import NSMakePoint, NSMakeRect, NSString
 
+import datetime as _dt
+
 from .usage import Snapshot, fmt_duration
 
 U = 4.0                 # 도트 한 칸
@@ -93,10 +95,18 @@ def rows_from_snapshot(snap: Snapshot) -> list[dict]:
             {"type": "note", "text": "지금은 쉬는 중"},
         ]
 
+    # 시각을 같이 보여주면 Claude Code 의 /usage 와 바로 맞춰 볼 수 있다
+    if snap.block_resets_at:
+        clock = _dt.datetime.fromtimestamp(snap.block_resets_at).strftime("%H:%M")
+        note = f"{clock} 초기화 · {fmt_duration(snap.remaining_now())} 뒤"
+    else:
+        note = f"{fmt_duration(snap.block_remaining)} 뒤 초기화"
+    if snap.source != "server":
+        note += " · 추정"
     return [
         {"type": "title", "text": "Claude 사용량"},
         {"type": "bar", "percent": snap.percent},
-        {"type": "note", "text": f"{fmt_duration(snap.block_remaining)} 뒤 초기화"},
+        {"type": "note", "text": note},
     ]
 
 
@@ -151,11 +161,16 @@ def _runs(cells: set[tuple[int, int]]):
         yield start, prev, y
 
 
-def _shape(wc: int, hc: int, tail_col: int) -> tuple[set, set]:
-    """말풍선 전체 칸과, 한 칸 깎아낸 안쪽 칸."""
+def _shape(wc: int, hc: int, tail_col: int, tail_top: bool = False) -> tuple[set, set]:
+    """말풍선 전체 칸과, 한 칸 깎아낸 안쪽 칸.
+
+    tail_top 이면 꼬리를 위아래로 뒤집어 풍선 위에 붙인다.
+    """
     cells = _balloon_cells(wc, hc, RADIUS_CELLS)
     for (dx, dy) in _TAIL:
-        cells.add((tail_col - _TAIL_TIP_COL + dx, dy - TAIL_ROWS))
+        col = tail_col - _TAIL_TIP_COL + dx
+        row = (hc + TAIL_ROWS - 1 - dy) if tail_top else (dy - TAIL_ROWS)
+        cells.add((col, row))
     return cells, _erode(cells)
 
 
@@ -168,6 +183,7 @@ class BubbleView(NSView):
             return None
         self._rows: list[dict] = []
         self._tail_col = None   # 아직 정해지지 않음 — 기본은 가운데
+        self._tail_top = False  # 말풍선이 마스코트 아래에 뜰 때는 꼬리가 위를 가리킨다
         self._cache_key = None
         self._cache = None
         return self
@@ -185,18 +201,29 @@ class BubbleView(NSView):
             self._tail_col = col
             self.setNeedsDisplay_(True)
 
+    def setTailAtTop_(self, flag):
+        flag = bool(flag)
+        if flag != self._tail_top:
+            self._tail_top = flag
+            self.setNeedsDisplay_(True)
+
     def isFlipped(self):
         return False
+
+    @objc.python_method
+    def _body_bottom(self) -> float:
+        """풍선 몸통이 시작하는 창 y 좌표. 꼬리가 아래면 꼬리 높이만큼 띄운다."""
+        return 0.0 if self._tail_top else TAIL_H
 
     @objc.python_method
     def _shape_for(self, width, height):
         wc = int(width / U)
         hc = int((height - TAIL_H) / U)
         tail_col = self._tail_col if self._tail_col is not None else wc // 2 - 2
-        key = (wc, hc, tail_col)
+        key = (wc, hc, tail_col, self._tail_top)
         if key != self._cache_key:
             self._cache_key = key
-            self._cache = _shape(wc, hc, tail_col)
+            self._cache = _shape(wc, hc, tail_col, self._tail_top)
         return self._cache
 
     def drawRect_(self, _rect):
@@ -224,14 +251,14 @@ class BubbleView(NSView):
         path = NSBezierPath.bezierPath()
         for x0, x1, y in _runs(cells):
             path.appendBezierPathWithRect_(
-                NSMakeRect(x0 * U + dx, TAIL_H + y * U + dy, (x1 - x0 + 1) * U, U)
+                NSMakeRect(x0 * U + dx, self._body_bottom() + y * U + dy, (x1 - x0 + 1) * U, U)
             )
         path.fill()
 
     @objc.python_method
     def _draw_rows(self, width, height):
         x = PAD_X
-        y = height - PAD_TOP
+        y = height - PAD_TOP - (TAIL_H if self._tail_top else 0)
         inner = width - PAD_X * 2
 
         for row in self._rows:

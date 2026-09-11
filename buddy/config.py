@@ -18,6 +18,8 @@ DEFAULTS: dict = {
     "block_cost_limit": None,
     # 이만큼(분) 요청이 없으면 졸기 시작한다. 0 이면 졸지 않는다.
     "doze_after_minutes": 20,
+    # Claude Code 계정으로 서버의 실제 사용률을 받아온다. 끄면 로컬 추정만 쓴다.
+    "use_server_usage": True,
     # 트랜스크립트 보관 기간(일). 길수록 첫 색인이 느려진다.
     "retention_days": 30,
     "notify": {

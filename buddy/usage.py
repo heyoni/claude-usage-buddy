@@ -289,10 +289,20 @@ class Snapshot:
     total_requests: int
     idle_seconds: float                 # 마지막 요청 이후 지난 시간
     doze_after: float                   # 이만큼 조용하면 존다
+    block_resets_at: float | None = None   # 5시간 창이 닫히는 시각 (epoch)
+    source: str = "local"               # "server" 면 퍼센트와 초기화 시각이 서버 값
+    week_percent: float | None = None   # 7일 한도 사용률 (서버 값이 있을 때만)
+    week_resets: float | None = None
 
     @property
     def has_data(self) -> bool:
         return self.total_requests > 0
+
+    def remaining_now(self) -> float:
+        """초기화까지 남은 시간을 스냅샷 시각이 아니라 지금 기준으로 잰다."""
+        if self.block_resets_at is None:
+            return 0.0
+        return max(0.0, self.block_resets_at - time.time())
 
     @property
     def dozing(self) -> bool:
@@ -327,7 +337,10 @@ def summarize(
     manual_limit: float | None = None,
     now: float | None = None,
     doze_after_seconds: float = 1200.0,
+    remote=None,
 ) -> Snapshot:
+    """로컬 기록을 집계한다. remote(서버 사용률)가 있으면 퍼센트와 초기화
+    시각은 그 값으로 덮어쓴다 — 서버가 실제로 세는 숫자가 추정보다 낫다."""
     now = now if now is not None else time.time()
     blocks = build_blocks(entries, block_hours)
 
@@ -359,12 +372,29 @@ def summarize(
     for e in today:
         per_model[pricing.display_name(e.model)] = per_model.get(pricing.display_name(e.model), 0.0) + e.cost
 
+    remaining = active.remaining_seconds(now) if active else 0.0
+    resets_at = active.end if active else None
+    source = "local"
+    week_percent = week_resets = None
+    if remote is not None:
+        percent = remote.five_hour.percent
+        if remote.five_hour.resets_at:
+            resets_at = remote.five_hour.resets_at
+            remaining = max(0.0, resets_at - now)
+        if remote.seven_day is not None:
+            week_percent = remote.seven_day.percent
+            week_resets = remote.seven_day.resets_at
+        source = "server"
+        # 서버가 창이 열려 있다고 하면 로컬 블록이 없어도 잠들지 않는다
+        if active is None and percent > 0 and remaining > 0:
+            active = Block(start=now - block_hours * 3600 + remaining, end=now + remaining)
+
     return Snapshot(
         generated_at=now,
         block=active,
         block_tokens=b_tokens,
         block_cost=b_cost,
-        block_remaining=active.remaining_seconds(now) if active else 0.0,
+        block_remaining=remaining,
         limit_cost=limit,
         percent=percent,
         today_tokens=t_tokens,
@@ -375,6 +405,10 @@ def summarize(
         total_requests=len(entries),
         idle_seconds=(now - entries[-1].ts) if entries else float("inf"),
         doze_after=doze_after_seconds,
+        block_resets_at=resets_at,
+        source=source,
+        week_percent=week_percent,
+        week_resets=week_resets,
     )
 
 
