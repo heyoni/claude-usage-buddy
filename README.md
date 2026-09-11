@@ -11,6 +11,23 @@
 
 ## 빠른 시작
 
+### 받아서 바로 쓰기 (터미널 없음)
+
+1. [**최신 릴리스**](https://github.com/heyoni/claude-usage-buddy/releases/latest)에서 `Claude-Usage-Buddy-<버전>-arm64.zip` 을 받습니다.
+2. 압축을 풀고 **Claude Usage Buddy.app** 을 `응용 프로그램` 폴더로 옮깁니다.
+3. 처음 한 번은 아이콘을 **우클릭 → 열기** 로 실행합니다. (아래 참고)
+
+바탕화면 오른쪽 아래에 마스코트가 나타납니다. 파이썬 설치도, 터미널도 필요 없습니다.
+
+> **처음 열 때 "확인되지 않은 개발자" 경고가 뜹니다.**
+> Apple 개발자 서명이 없어서 그렇습니다. 더블클릭 대신 **우클릭 → 열기** 를 누르면 "열기" 버튼이 나옵니다.
+> 한 번만 그렇게 열면 다음부터는 더블클릭으로 됩니다.
+> 그래도 안 되면 `시스템 설정 → 개인정보 보호 및 보안` 맨 아래의 "그래도 열기" 를 누르세요.
+
+> Apple Silicon(M1 이후) 맥용입니다. Intel 맥은 아래 "클론해서 쓰기" 로 설치하세요.
+
+### 클론해서 쓰기 (터미널 명령도 쓰려면)
+
 ```bash
 git clone https://github.com/heyoni/claude-usage-buddy.git
 cd claude-usage-buddy
@@ -18,7 +35,10 @@ cd claude-usage-buddy
 claude-usage-buddy
 ```
 
-바탕화면 오른쪽 아래에 마스코트가 나타납니다. 이제 이렇게 씁니다.
+`claude-usage-buddy --cli` 같은 터미널 명령을 쓰고 싶거나, Intel 맥이거나, 코드를 고치고 싶을 때 이 방법을 씁니다.
+이 방법도 `~/Applications` 에 더블클릭용 앱을 같이 만들어 줍니다.
+
+### 쓰는 법
 
 | 하고 싶은 것 | 방법 |
 | --- | --- |
@@ -26,10 +46,10 @@ claude-usage-buddy
 | 계속 띄워 두고 보기 | 마스코트를 **꾹 누르기** |
 | 자리 옮기기 | **드래그** |
 | 크기 바꾸기 / 끄기 | **우클릭** → 메뉴 |
-| 터미널에서 숫자만 보기 | `claude-usage-buddy --cli` |
-| 터미널 없이 띄우기 | 런치패드에서 **Claude Usage Buddy** 더블클릭 |
-| Claude Code 켤 때 같이 띄우기 | `./install.sh --hook` |
-| 맥 켤 때마다 자동으로 띄우기 | `./install.sh --autostart` |
+| Claude Code 켤 때 같이 띄우기 | **우클릭** → "Claude Code 켤 때 같이 띄우기" |
+| 맥 켤 때마다 자동으로 띄우기 | **우클릭** → "로그인 시 자동 실행" |
+| 퍼센트를 실제 값에 맞추기 | **우클릭** → "눈금 맞추기…" |
+| 터미널에서 숫자만 보기 | `claude-usage-buddy --cli` (클론 설치 시) |
 
 퍼센트가 Claude Code 가 알려주는 값과 다르다면
 [눈금 맞추기](#눈금-맞추기)를 한 번 해 주세요. 이유도 거기 적어 두었습니다.
@@ -72,9 +92,10 @@ claude-usage-buddy --demo exhausted
 
 ---
 
-## 설치
+## 클론해서 설치하기 (자세히)
 
 **요구 사항**: macOS, Python 3.10 이상. Claude Code 를 한 번이라도 쓴 적이 있어야 합니다.
+릴리스 zip 으로 받았다면 이 섹션은 건너뛰어도 됩니다.
 
 ```bash
 git clone https://github.com/heyoni/claude-usage-buddy.git
@@ -98,8 +119,8 @@ cd claude-usage-buddy
 | 방법 | 언제 뜨나 | 설정 |
 | --- | --- | --- |
 | 앱 더블클릭 | 내가 켤 때 | 설치하면 바로 됨 |
-| Claude Code 연동 | `claude` 를 켤 때마다 | `./install.sh --hook` |
-| 로그인 시 자동 실행 | 맥을 켤 때마다 | `./install.sh --autostart` |
+| Claude Code 연동 | `claude` 를 켤 때마다 | 우클릭 메뉴, 또는 `./install.sh --hook` |
+| 로그인 시 자동 실행 | 맥을 켤 때마다 | 우클릭 메뉴, 또는 `./install.sh --autostart` |
 
 터미널에서는 `claude-usage-buddy` 로도 뜹니다.
 `~/.local/bin` 이 PATH 에 없다면 셸 설정에 `export PATH="$HOME/.local/bin:$PATH"` 를 넣으세요.
@@ -120,7 +141,7 @@ cd claude-usage-buddy
 | 클릭 | 말풍선 열기 (3초 뒤 스르륵 사라짐) / 닫기 |
 | 꾹 누르기 (0.8초) | 말풍선 고정 — 다시 누를 때까지 계속 떠 있습니다 |
 | 드래그 | 원하는 자리로 옮기기 (위치가 저장됩니다) |
-| 우클릭 | 메뉴 — 사용량 보기, 새로고침, 크기, 돌아다니기, 자동 실행, 설정 열기, 종료 |
+| 우클릭 | 메뉴 — 사용량 보기, 새로고침, 크기, 돌아다니기, Claude Code 연동, 자동 실행, 눈금 맞추기, 설정 열기, 종료 |
 
 말풍선은 다른 모니터로 포커스가 옮겨가거나 데스크탑(스페이스)을 전환하면 닫힙니다.
 크기는 우클릭 메뉴에서 5단계로 바꿀 수 있고, 재시작 없이 바로 반영됩니다.
@@ -162,7 +183,8 @@ Pro/Max 구독으로 쓰고 있다면 실제 청구 금액이 아니라 "같은 
 
 #### 눈금 맞추기
 
-Claude Code 에서 실제 퍼센트를 확인한 뒤, 그 숫자를 알려 주면 기준을 역산해 저장합니다.
+Claude Code 에서 `/usage` 로 실제 퍼센트를 확인한 뒤, 그 숫자를 알려 주면 기준을 역산해 저장합니다.
+마스코트를 **우클릭 → "눈금 맞추기…"** 에 숫자를 넣으면 됩니다. 터미널에서는:
 
 ```bash
 # Claude Code 가 90% 라고 할 때
@@ -288,7 +310,11 @@ buddy/
 ├── hook.py       Claude Code SessionStart 훅 등록
 ├── appbundle.py  더블클릭용 .app 번들과 아이콘 생성
 ├── single.py     중복 실행 방지
+├── bundle.py     독립 실행 앱 안에서 도는지 판별
 └── cli.py        터미널 출력
+packaging/
+├── build.sh      독립 실행 앱(.app)과 배포용 zip 빌드
+└── setup.py      py2app 설정
 tools/
 ├── render_preview.py   표정 미리보기 PNG
 └── render_states.py    사용량 구간별 PNG
@@ -306,6 +332,16 @@ tests/
 세션을 이어받거나 분기하면 같은 요청이 여러 파일에 복사되므로,
 요청 ID 로 중복을 걸러냅니다.
 
+### 배포용 앱 만들기
+
+```bash
+./packaging/build.sh
+```
+
+`py2app` 으로 파이썬과 PyObjC 를 통째로 넣은 `.app` 을 만들고 `dist/` 에 zip 으로 묶습니다.
+빌드한 맥과 같은 아키텍처(Apple Silicon 이면 arm64)에서만 돕니다.
+서명과 공증은 하지 않으므로, 받은 사람은 처음 한 번 우클릭 → 열기 로 실행해야 합니다.
+
 ### 그림
 
 마스코트와 말풍선 모두 이미지 파일 없이 **코드로 칸을 찍어** 그립니다.
@@ -320,6 +356,7 @@ tests/
 - 서버가 주는 실제 rate limit 잔량은 로컬에 없어서, 사용률은 어디까지나 추정입니다
   (위의 눈금 맞추기 참고).
 - 알림은 `osascript` 를 씁니다.
+- 릴리스 앱은 Apple 개발자 서명이 없어 처음 열 때 우클릭 → 열기 가 필요합니다. 서명에는 연간 개발자 계정이 필요해 아직 하지 않았습니다.
 - 마스코트는 항상 다른 창 위에 뜹니다. 전체 화면 앱 위에서는 가려질 수 있습니다.
 
 ---
