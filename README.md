@@ -9,6 +9,31 @@
 
 ---
 
+## 빠른 시작
+
+```bash
+git clone https://github.com/heyoni/claude-usage-buddy.git
+cd claude-usage-buddy
+./install.sh
+claude-usage-buddy
+```
+
+바탕화면 오른쪽 아래에 마스코트가 나타납니다. 이제 이렇게 씁니다.
+
+| 하고 싶은 것 | 방법 |
+| --- | --- |
+| 지금 얼마나 썼는지 보기 | 마스코트를 **클릭** |
+| 계속 띄워 두고 보기 | 마스코트를 **꾹 누르기** |
+| 자리 옮기기 | **드래그** |
+| 크기 바꾸기 / 끄기 | **우클릭** → 메뉴 |
+| 터미널에서 숫자만 보기 | `claude-usage-buddy --cli` |
+| 맥 켤 때마다 자동으로 띄우기 | `./install.sh --autostart` |
+
+퍼센트가 Claude Code 가 알려주는 값과 다르다면
+[눈금 맞추기](#눈금-맞추기)를 한 번 해 주세요. 이유도 거기 적어 두었습니다.
+
+---
+
 ## 왜 만들었나
 
 Claude Code 의 사용 한도는 **5시간짜리 창(블록)** 단위로 돌아옵니다. 그런데 지금 그 창을
