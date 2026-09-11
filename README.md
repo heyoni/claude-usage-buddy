@@ -168,8 +168,8 @@ claude-usage-buddy --calibrate 90
 ```
 
 ```
-현재 블록 환산 비용  $122.64
-이걸 90% 로 보면  100% = $136.26
+현재 블록 환산 비용  $17.10
+이걸 90% 로 보면  100% = $19.00
 
 기준을 저장했습니다: ~/.claude-usage-buddy/config.json
 다음 갱신(최대 1분)부터 마스코트에 반영됩니다.
@@ -190,12 +190,12 @@ $ claude-usage-buddy --cli
 Claude 사용량
 ────────────────────────────────────────
 5시간 블록   ███████████████░░░░░░░░░ 65%
-             $75.65 · 79.3M tok
-             2시간 7분 남음 (기준 $136.26)
+             $12.40 · 14.2M tok
+             2시간 7분 남음 (기준 $19.00)
 ────────────────────────────────────────
-오늘         $75.65 · 79.3M tok
-최근 7일     $402.54 · 446.4M tok
-오늘 모델    Opus 5 100%
+오늘         $21.80 · 25.6M tok
+최근 7일     $96.30 · 112.4M tok
+오늘 모델    Opus 5 82%, Sonnet 5 18%
 
 * 금액은 API 정가 환산 추정치입니다 (구독 실제 청구액 아님)
 ```
@@ -206,10 +206,10 @@ Claude 사용량
 ```bash
 $ claude-usage-buddy --json
 {
-  "block": { "percent": 65.0, "cost_usd": 75.65, "tokens": 79300000,
-             "limit_usd": 136.26, "remaining_seconds": 7620, "active": true },
-  "today": { "cost_usd": 75.65, "tokens": 79300000 },
-  "week":  { "cost_usd": 402.54, "tokens": 446400000 },
+  "block": { "percent": 65.0, "cost_usd": 12.40, "tokens": 14200000,
+             "limit_usd": 19.00, "remaining_seconds": 7620, "active": true },
+  "today": { "cost_usd": 21.80, "tokens": 25600000 },
+  "week":  { "cost_usd": 96.30, "tokens": 112400000 },
   "idle_seconds": 22, "dozing": false, "mood": "busy"
 }
 ```
